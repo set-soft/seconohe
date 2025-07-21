@@ -1,0 +1,26 @@
+[project]
+name = "seconohe"
+version = "0.1.0"
+authors = [
+    { name="Salvador E. Tropea", email="stropea@inti.gob.ar" },
+]
+description = "SET ComfyUI Node Helpers"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "tqdm",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "mypy",
+]
+better_dl = ["requests"]
+better_color = ["colorama"]
