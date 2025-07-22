@@ -12,3 +12,6 @@ class SeconoheConfig:
     """
     NODES_NAME: str = "Unknown"
     JS_PATH: str = os.path.join(os.path.dirname(__file__), "js")
+
+
+settings = SeconoheConfig()

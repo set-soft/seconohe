@@ -1,7 +1,4 @@
-from .config import SeconoheConfig
+from .config import settings
 
 __version__ = "0.1.0"
-
-settings = SeconoheConfig()
-
 __all__ = ["settings"]
