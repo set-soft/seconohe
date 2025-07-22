@@ -32,7 +32,8 @@ def send_toast_notification(message: str, summary: str = "Warning", severity: st
         sid (str, optional): The session ID of the client to send to.
                             If None, broadcasts to all clients. Defaults to None.
     """
-    if not with_comfy:
+    # Check we have ComfyUI and the server is running
+    if not with_comfy or not hasattr(PromptServer, 'instance'):
         return
     try:
         PromptServer.instance.send_sync(
