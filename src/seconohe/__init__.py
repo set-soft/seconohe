@@ -1,4 +1,5 @@
-from .config import settings
+import os
+
 
 __version__ = "0.1.0"
-__all__ = ["settings"]
+JS_PATH = os.path.join(os.path.dirname(__file__), "js")

@@ -5,12 +5,11 @@
 # Helper to register all nodes from the provided modules
 import inspect
 import logging
-from . import settings
+import types
+from typing import List
 
-logger = logging.getLogger(f"{settings.NODES_NAME}.register_nodes")
 
-
-def register_nodes(modules):
+def register_nodes(logger: logging.Logger, modules: List[types.ModuleType]):
     NODE_CLASS_MAPPINGS = {}
     NODE_DISPLAY_NAME_MAPPINGS = {}
 

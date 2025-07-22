@@ -14,14 +14,12 @@ try:
     with_comfy = True
 except Exception:
     with_comfy = False
-# Local imports
-from . import settings
 
-logger = logging.getLogger(f"{settings.NODES_NAME}.comfy_notification")
 EVENT_NAME = "seconohe-toast"
 
 
-def send_toast_notification(message: str, summary: str = "Warning", severity: str = "warn", sid: Optional[str] = None):
+def send_toast_notification(logger: logging.Logger, message: str, summary: str = "Warning", severity: str = "warn",
+                            sid: Optional[str] = None):
     """
     Sends a toast notification event to the ComfyUI client.
 

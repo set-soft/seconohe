@@ -7,7 +7,6 @@ import logging
 import os
 import sys
 from typing import Any, Callable
-from . import settings
 from .comfy_notification import send_toast_notification
 
 
@@ -30,7 +29,7 @@ except ImportError:
 class CustomFormatter(logging.Formatter):
     """Logging Formatter to add colors"""
 
-    def __init__(self):
+    def __init__(self, name):
         super(logging.Formatter, self).__init__()
         white = Fore.WHITE + Style.BRIGHT
         yellow = Fore.YELLOW + Style.BRIGHT
@@ -40,8 +39,8 @@ class CustomFormatter(logging.Formatter):
         reset = Style.RESET_ALL
         # format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s "
         #          "(%(filename)s:%(lineno)d)"
-        format = f"[{settings.NODES_NAME} %(levelname)s] %(message)s (%(name)s - %(filename)s:%(lineno)d)"
-        format_simple = f"[{settings.NODES_NAME}] %(message)s"
+        format = f"[{name} %(levelname)s] %(message)s (%(name)s - %(filename)s:%(lineno)d)"
+        format_simple = f"[{name}] %(message)s"
 
         self.FORMATS = {
             logging.DEBUG: cyan + format + reset,
@@ -57,7 +56,7 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def on_log_error_or_warning(record: logging.LogRecord) -> None:
+def on_log_error_or_warning(logger: logging.Logger, record: logging.LogRecord) -> None:
     """
     This function is called whenever a log with level WARNING or higher is emitted.
     The 'record' object contains all information about the log event.
@@ -68,14 +67,14 @@ def on_log_error_or_warning(record: logging.LogRecord) -> None:
     else:
         summary = "Error"
         severity = "error"
-    send_toast_notification(record.getMessage(), summary=summary, severity=severity)
+    send_toast_notification(logger, record.getMessage(), summary=summary, severity=severity)
 
 
 class WarningAndErrorFilter(logging.Filter):
     """
     A custom log filter that intercepts logs of a certain level.
     """
-    def __init__(self, callback: Callable, level: int = logging.WARNING):
+    def __init__(self, logger: logging.Logger, callback: Callable, level: int = logging.WARNING):
         """
         Initializes the filter.
 
@@ -86,6 +85,7 @@ class WarningAndErrorFilter(logging.Filter):
         super().__init__()
         self._callback = callback
         self._level = level
+        self._logger = logger
 
     def filter(self, record: logging.LogRecord) -> bool:
         """
@@ -93,45 +93,51 @@ class WarningAndErrorFilter(logging.Filter):
         """
         # Check if the log level is WARNING or higher
         if record.levelno >= self._level:
-            self._callback(record)
+            self._callback(self._logger, record)
 
         # Always return True to ensure the log is always processed
         # by the handlers after this filter.
         return True
 
 
-# Create a new logger
-logger = logging.getLogger(settings.NODES_NAME)
-logger.propagate = False
-
-# Add the custom filter to the logger.
-logger.addFilter(WarningAndErrorFilter(callback=on_log_error_or_warning))
-
-# Add handler if we don't have one.
-if not logger.handlers:
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(CustomFormatter())
-    logger.addHandler(handler)
-
 # ######################
 # Logger setup
 # ######################
-# 1. Determine the ComfyUI global log level (influenced by --verbose)
-main_logger = logger
-comfy_root_logger = logging.getLogger('comfy')
-effective_comfy_level = logging.getLogger().getEffectiveLevel()
-# 2. Check our custom environment variable for more verbosity
-NODES_DEBUG_VAR = settings.NODES_NAME.upper() + "_NODES_DEBUG"
-try:
-    nodes_debug_env = int(os.environ.get(NODES_DEBUG_VAR, "0"))
-except ValueError:
-    nodes_debug_env = 0
-# 3. Set node's logger level
-if nodes_debug_env:
-    main_logger.setLevel(logging.DEBUG - (nodes_debug_env - 1))
-    final_level_str = f"DEBUG (due to {NODES_DEBUG_VAR}={nodes_debug_env})"
-else:
-    main_logger.setLevel(effective_comfy_level)
-    final_level_str = logging.getLevelName(effective_comfy_level) + " (matching ComfyUI global)"
-_initial_setup_logger = logging.getLogger(settings.NODES_NAME + ".setup")  # A temporary logger for this message
-_initial_setup_logger.debug(f"{settings.NODES_NAME} logger level set to: {final_level_str}")
+def initialize_logger(name):
+    # Create a new logger
+    logger = logging.getLogger(name)
+    logger.propagate = False
+
+    # Add the custom filter to the logger.
+    logger.addFilter(WarningAndErrorFilter(logger, callback=on_log_error_or_warning))
+
+    # Add handler if we don't have one.
+    if not logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(CustomFormatter(name))
+        logger.addHandler(handler)
+
+    # Determine the ComfyUI global log level (influenced by --verbose)
+    # comfy_root_logger = logging.getLogger('comfy')
+    effective_comfy_level = logging.getLogger().getEffectiveLevel()
+
+    # Check our custom environment variable for more verbosity
+    NODES_DEBUG_VAR = name.upper() + "_NODES_DEBUG"
+    try:
+        nodes_debug_env = int(os.environ.get(NODES_DEBUG_VAR, "0"))
+    except ValueError:
+        nodes_debug_env = 0
+
+    # Set node's logger level
+    if nodes_debug_env:
+        logger.setLevel(logging.DEBUG - (nodes_debug_env - 1))
+        final_level_str = f"DEBUG (due to {NODES_DEBUG_VAR}={nodes_debug_env})"
+    else:
+        logger.setLevel(effective_comfy_level)
+        final_level_str = logging.getLevelName(effective_comfy_level) + " (matching ComfyUI global)"
+
+    # A temporary logger for this message
+    _initial_setup_logger = logging.getLogger(name + ".setup")
+    _initial_setup_logger.debug(f"{name} logger level set to: {final_level_str}")
+
+    return logger

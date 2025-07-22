@@ -24,12 +24,9 @@ except Exception:
     with_comfy = False
 # Local imports
 from .comfy_notification import send_toast_notification
-from . import settings
-
-logger = logging.getLogger(f"{settings.NODES_NAME}.downloader")
 
 
-def _download_model_requests(url: str, save_dir: str, file_name: str):
+def _download_model_requests(logger: logging.Logger, url: str, save_dir: str, file_name: str):
     """
     Downloads a file from a URL with progress bars for both console and ComfyUI.
 
@@ -192,20 +189,21 @@ def _download_model_urllib(url: str, save_dir: str, file_name: str):
     return Downloader(save_dir, file_name).download_model(url)
 
 
-def download_file(url: str, save_dir: str, file_name: str, force_urllib: bool = False, kind: str = "model"):
+def download_file(logger: logging.Logger, url: str, save_dir: str, file_name: str, force_urllib: bool = False,
+                  kind: str = "model"):
     logger.info(f"Downloading {kind}: {file_name}")
     logger.info(f"Source URL: {url}")
     full_name = os.path.join(save_dir, file_name)
     logger.info(f"Destination: {full_name}")
 
-    send_toast_notification(f"Downloading `{file_name}`", "Download")
+    send_toast_notification(logger, f"Downloading `{file_name}`", "Download")
 
     if with_requests and not force_urllib:
-        _download_model_requests(url, save_dir, file_name)
+        _download_model_requests(logger, url, save_dir, file_name)
     else:
         _download_model_urllib(url, save_dir, file_name)
 
-    send_toast_notification("Finished downloading", "Download", 'success')
+    send_toast_notification(logger, "Finished downloading", "Download", 'success')
 
     logger.info(f"Successfully downloaded {full_name}")
     return full_name
