@@ -24,6 +24,7 @@ def send_toast_notification(logger: logging.Logger, message: str, summary: str =
     Sends a toast notification event to the ComfyUI client.
 
     Args:
+        logger (logging.Logger): The logger used in case we need to report an error
         message (str): The message content of the toast.
         severity (str): The type of toast. Can be 'success' | 'info' | 'warn' | 'error' | 'secondary' | 'contrast'
         summary (str): Short explanation
