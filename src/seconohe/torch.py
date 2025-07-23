@@ -74,6 +74,7 @@ def model_to_target(logger: logging.Logger, model: torch.nn.Module):
     # Tell mypy the expected types for these variables.
     target_device: torch.device
     original_device: torch.device
+    original_cudnn_benchmark_state: Optional[bool] = None  # Default is to keep the current setting
 
     # 1. Determine target device from the model object
     # Use a hasattr check for robustness, and type hinting
@@ -92,7 +93,7 @@ def model_to_target(logger: logging.Logger, model: torch.nn.Module):
 
     # 2. Get CUDNN benchmark setting from the model object (optional)
     # Use hasattr as this is an optional setting that not all models might have.
-    original_cudnn_benchmark_state: Optional[bool] = None  # Default is to keep the current setting
+    cudnn_benchmark_enabled: Optional[bool] = None
     if hasattr(model, 'cudnn_benchmark_setting'):
         setting = model.cudnn_benchmark_setting
         if isinstance(setting, bool):
