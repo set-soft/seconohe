@@ -37,11 +37,11 @@ class CustomFormatter(logging.Formatter):
         red_alarm = Fore.RED + Back.WHITE + Style.BRIGHT
         cyan = Fore.CYAN + Style.BRIGHT
         reset = Style.RESET_ALL
+        # Node formats
         # format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s "
         #          "(%(filename)s:%(lineno)d)"
         format = f"[{name} %(levelname)s] %(message)s (%(name)s - %(filename)s:%(lineno)d)"
         format_simple = f"[{name}] %(message)s"
-
         self.FORMATS = {
             logging.DEBUG: cyan + format + reset,
             logging.INFO: white + format_simple + reset,
@@ -49,9 +49,27 @@ class CustomFormatter(logging.Formatter):
             logging.ERROR: red + format + reset,
             logging.CRITICAL: red_alarm + format + reset
         }
+        # Standalone formats (CLI)
+        format = "[%(levelname)s] %(message)s (%(name)s - %(filename)s:%(lineno)d)"
+        format_simple = "%(message)s"
+        if not sys.stdout.isatty():
+            white = yellow = red = red_alarm = cyan = reset = ""
+        self.FORMATS_STANDALONE = {
+            logging.DEBUG: cyan + format + reset,
+            logging.INFO: white + format_simple + reset,
+            logging.WARNING: yellow + format + reset,
+            logging.ERROR: red + format + reset,
+            logging.CRITICAL: red_alarm + format + reset
+        }
+        # Assume we are a node
+        self.standalone = False
+
+    def set_standalone(self):
+        self.standalone = True
 
     def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
+        formats = self.FORMATS_STANDALONE if self.standalone else self.FORMATS
+        log_fmt = formats.get(record.levelno)
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
 
@@ -114,8 +132,10 @@ def initialize_logger(name):
     # Add handler if we don't have one.
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(CustomFormatter(name))
+        custom_formatter = CustomFormatter(name)
+        handler.setFormatter(custom_formatter)
         logger.addHandler(handler)
+        logger.custom_formatter = custom_formatter
 
     # Determine the ComfyUI global log level (influenced by --verbose)
     # comfy_root_logger = logging.getLogger('comfy')
@@ -141,6 +161,19 @@ def initialize_logger(name):
     _initial_setup_logger.debug(f"{name} logger level set to: {final_level_str}")
 
     return logger
+
+
+def logger_set_standalone(logger, args):
+    """ Change the logger to standalone CLI mode.
+        args.verbose is the verbosity level
+        args.quiet is the optional quiet mode (warning level) """
+    if hasattr(logger, 'custom_formatter'):
+        logger.custom_formatter.set_standalone()
+    if hasattr(args, 'quiet'):
+        logger.setLevel(logging.WARNING)
+    else:
+        verbose = args.verbose
+        logger.setLevel(logging.DEBUG - (verbose - 1) if verbose else logging.INFO)
 
 
 def get_debug_level(logger):
