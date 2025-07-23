@@ -141,3 +141,12 @@ def initialize_logger(name):
     _initial_setup_logger.debug(f"{name} logger level set to: {final_level_str}")
 
     return logger
+
+
+def get_debug_level(logger):
+    return logging.DEBUG - logger.getEffectiveLevel() + 1
+
+
+def debugl(logger, level, msg):
+    if get_debug_level(logger) >= level:
+        logger.debug(msg)
