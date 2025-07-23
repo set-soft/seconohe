@@ -3,6 +3,7 @@
 # License: GPL-3.0
 # Project: SeCoNoHe
 from __future__ import annotations  # Good practice
+import argparse  # For typing
 import logging
 import os
 import sys
@@ -29,7 +30,7 @@ except ImportError:
 class CustomFormatter(logging.Formatter):
     """Logging Formatter to add colors"""
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         super(logging.Formatter, self).__init__()
         white = Fore.WHITE + Style.BRIGHT
         yellow = Fore.YELLOW + Style.BRIGHT
@@ -64,10 +65,10 @@ class CustomFormatter(logging.Formatter):
         # Assume we are a node
         self.standalone = False
 
-    def set_standalone(self):
+    def set_standalone(self) -> None:
         self.standalone = True
 
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
         formats = self.FORMATS_STANDALONE if self.standalone else self.FORMATS
         log_fmt = formats.get(record.levelno)
         formatter = logging.Formatter(log_fmt)
@@ -121,7 +122,7 @@ class WarningAndErrorFilter(logging.Filter):
 # ######################
 # Logger setup
 # ######################
-def initialize_logger(name):
+def initialize_logger(name: str) -> logging.Logger:
     # Create a new logger
     logger = logging.getLogger(name)
     logger.propagate = False
@@ -135,7 +136,7 @@ def initialize_logger(name):
         custom_formatter = CustomFormatter(name)
         handler.setFormatter(custom_formatter)
         logger.addHandler(handler)
-        logger.custom_formatter = custom_formatter
+        setattr(logger, 'custom_formatter', custom_formatter)
 
     # Determine the ComfyUI global log level (influenced by --verbose)
     # comfy_root_logger = logging.getLogger('comfy')
@@ -163,7 +164,7 @@ def initialize_logger(name):
     return logger
 
 
-def logger_set_standalone(logger, args):
+def logger_set_standalone(logger: logging.Logger, args: argparse.Namespace) -> None:
     """ Change the logger to standalone CLI mode.
         args.verbose is the verbosity level
         args.quiet is the optional quiet mode (warning level) """
@@ -176,10 +177,10 @@ def logger_set_standalone(logger, args):
         logger.setLevel(logging.DEBUG - (verbose - 1) if verbose else logging.INFO)
 
 
-def get_debug_level(logger):
+def get_debug_level(logger: logging.Logger) -> int:
     return logging.DEBUG - logger.getEffectiveLevel() + 1
 
 
-def debugl(logger, level, msg):
+def debugl(logger: logging.Logger, level: int, msg: str) -> None:
     if get_debug_level(logger) >= level:
         logger.debug(msg)
