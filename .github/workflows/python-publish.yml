@@ -55,4 +55,5 @@ jobs:
           path: dist/
 
       - name: Publish release distributions to PyPI
+        # This is the SHA1 for release/v1 the two SHA1 values shown at GitHub examples are bogus!
         uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc
