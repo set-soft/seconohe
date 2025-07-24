@@ -7,24 +7,42 @@ import argparse  # For typing
 import logging
 import os
 import sys
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Callable
 from .comfy_notification import send_toast_notification
 
 
-# 1. Initialize variables with the `Any` type.
-#    This tells mypy not to make assumptions about their specific class.
-Fore: Any
-Back: Any
-Style: Any
+# 1. This block is ONLY for the type checker.
+#    It imports the canonical types and assigns them.
+if TYPE_CHECKING:
+    # Import the real objects for type analysis
+    from colorama import Fore, Back, Style
+    # A dummy init function hint
+    def colorama_init() -> None: ...
 
-# 2. Perform the runtime import logic as before.
-try:
-    from colorama import init as colorama_init, Fore, Back, Style
-    colorama_init()
-except ImportError:
-    # If colorama is not available, import our fallback.
-    # mypy will now allow this assignment because the variables were declared as Any.
-    from .ansi import Fore, Back, Style
+# 2. This block is for RUNTIME.
+#    It does not use `from ... import ...` for the conflicting names.
+else:
+    try:
+        # Import the entire module
+        import colorama
+        # Assign the names from the module's namespace
+        Fore = colorama.Fore
+        Back = colorama.Back
+        Style = colorama.Style
+        colorama_init = colorama.init
+        # Initialize at runtime
+        colorama_init()
+    except ImportError:
+        # If the import fails, import our fallback module
+        from . import ansi
+        # Assign the names from our fallback module's namespace
+        Fore = ansi.Fore
+        Back = ansi.Back
+        Style = ansi.Style
+
+        # Define a dummy init function to ensure it always exists
+        def colorama_init() -> None:
+            pass
 
 
 class CustomFormatter(logging.Formatter):

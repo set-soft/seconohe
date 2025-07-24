@@ -15,6 +15,7 @@ try:
 except Exception:
     with_requests = False
 import urllib
+from urllib.error import URLError
 from tqdm import tqdm
 # ComfyUI imports
 try:
@@ -172,7 +173,7 @@ class Downloader:
 
             return filename
 
-        except urllib.error.URLError as e:  # More specific exception for network issues
+        except URLError as e:  # More specific exception for network issues
             # Clean up partially downloaded file if an error occurs
             if os.path.exists(self.model_full_name):
                 os.remove(self.model_full_name)
