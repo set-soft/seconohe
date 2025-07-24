@@ -29,6 +29,7 @@ jobs:
           set -o pipefail
           pip install mypy
           pip install requests
+          python3 -m pip install types-requests
           pre-commit gc
           pre-commit run --show-diff-on-failure --color=always --all-files | tee ${RAW_LOG}
       - name: Convert Raw Log to CheckStyle format

@@ -14,8 +14,8 @@ try:
     with_requests = True
 except Exception:
     with_requests = False
-import urllib
 from urllib.error import URLError
+from urllib.request import urlretrieve
 from tqdm import tqdm
 # ComfyUI imports
 try:
@@ -168,7 +168,7 @@ class Downloader:
                                desc=f"Downloading {filename}") as t:
                 # urlretrieve(url, filename=None, reporthook=None, data=None)
                 # reporthook is called with (block_num, block_size, total_size)
-                urllib.request.urlretrieve(url, self.model_full_name, reporthook=t.update_to)
+                urlretrieve(url, self.model_full_name, reporthook=t.update_to)
             # The 'with' statement ensures t.close() is called.
 
             return filename
