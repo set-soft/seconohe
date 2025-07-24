@@ -12,7 +12,7 @@ import os
 try:
     import requests
     with_requests = True
-except Exception:
+except ImportError:
     with_requests = False
 from urllib.error import URLError
 from urllib.request import urlretrieve
@@ -21,20 +21,29 @@ from tqdm import tqdm
 try:
     import comfy.utils
     with_comfy = True
-except Exception:
+except ImportError:
     with_comfy = False
 # Local imports
 from .comfy_notification import send_toast_notification
 
 
-def _download_model_requests(logger: logging.Logger, url: str, save_dir: str, file_name: str):
+def _download_model_requests(logger: logging.Logger, url: str, save_dir: str, file_name: str) -> str:
     """
-    Downloads a file from a URL with progress bars for both console and ComfyUI.
+    Downloads a file using the `requests` library with streaming for progress.
+    Progress is displayed to both console and ComfyUI.
 
-    Args:
-        url (str): The direct download URL for the file.
-        save_dir (str): The directory where the file will be saved.
-        file_name (str): The name of the file to be saved on disk.
+    :param logger: Logger for status messages.
+    :type logger: logging.Logger
+    :param url: The direct download URL.
+    :type url: str
+    :param save_dir: The directory to save the file in.
+    :type save_dir: str
+    :param file_name: The name for the saved file.
+    :type file_name: str
+    :raises requests.exceptions.RequestException: For network-related errors.
+    :raises IOError: If the downloaded file size does not match the expected size.
+    :return: The full path to the downloaded file.
+    :rtype: str
     """
     full_path = os.path.join(save_dir, file_name)
 
@@ -191,19 +200,33 @@ def _download_model_urllib(url: str, save_dir: str, file_name: str):
 
 
 def download_file(logger: logging.Logger, url: str, save_dir: str, file_name: str, force_urllib: bool = False,
-                  kind: str = "model"):
+                  kind: str = "model") -> str:
     """
-    Downloads a file from a URL with progress bars for both console and ComfyUI.
-    Also GUI notification at start and end.
-    We also log the URL and destination to the console.
+    Downloads a file with progress reporting for both console and ComfyUI.
 
-    Args:
-        logger (logging.Logger): The used logger
-        url (str): The direct download URL for the file.
-        save_dir (str): The directory where the file will be saved.
-        file_name (str): The name of the file to be saved on disk.
-        force_urllib (bool=False): Ignore `requests`
-        kind (str='model'): Kind of file we are downloading, just for the logs
+    This function acts as a high-level wrapper, preferring the `requests` library
+    for its robustness but falling back to Python's built-in `urllib` if
+    `requests` is not available. It also sends UI notifications at the start
+    and end of the download.
+
+    :param logger: The logger instance for status and error messages.
+    :type logger: logging.Logger
+    :param url: The direct download URL for the file.
+    :type url: str
+    :param save_dir: The directory where the file will be saved.
+    :type save_dir: str
+    :param file_name: The name of the file to be saved on disk.
+    :type file_name: str
+    :param force_urllib: If ``True``, forces the use of `urllib` even if
+                         `requests` is available. Defaults to ``False``.
+    :type force_urllib: bool
+    :param kind: A descriptive string for the type of file being downloaded
+                 (e.g., 'model', 'config'), used for logging. Defaults to 'model'.
+    :type kind: str
+    :raises Exception: Propagates exceptions from the underlying downloaders
+                       (e.g., network errors, file errors).
+    :return: The full path to the successfully downloaded file.
+    :rtype: str
     """
     logger.info(f"Downloading {kind}: {file_name}")
     logger.info(f"Source URL: {url}")
