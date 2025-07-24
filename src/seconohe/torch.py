@@ -7,7 +7,7 @@
 import contextlib  # For context manager
 import logging
 import torch
-from typing import Optional
+from typing import Optional, Iterator, cast
 try:
     import comfy.model_management as mm
     with_comfy = True
@@ -15,7 +15,17 @@ except Exception:
     with_comfy = False
 
 
-def get_torch_device_options():
+def get_torch_device_options() -> tuple[list[str], str]:
+    """
+    Detects available PyTorch devices and returns a list and a suitable default.
+
+    Scans for CPU, CUDA devices, and MPS (for Apple Silicon), providing a list
+    of device strings (e.g., 'cpu', 'cuda', 'cuda:0') and a recommended default.
+
+    :return: A tuple containing the list of available device strings and the
+             recommended default device string.
+    :rtype: tuple[list[str], str]
+    """
     # We always have CPU
     default = "cpu"
     options = [default]
@@ -33,12 +43,33 @@ def get_torch_device_options():
     return options, default
 
 
-def get_offload_device():
-    return mm.unet_offload_device() if with_comfy else torch.device("cpu")
+def get_offload_device() -> torch.device:
+    """
+    Gets the appropriate device for offloading models.
+
+    Uses `comfy.model_management.unet_offload_device()` if available in a ComfyUI
+    environment, otherwise defaults to the CPU.
+
+    :return: The torch.device object to use for offloading.
+    :rtype: torch.device
+    """
+    if with_comfy:
+        return cast(torch.device, mm.unet_offload_device())
+    return torch.device("cpu")
 
 
 def get_canonical_device(device: str | torch.device) -> torch.device:
-    """Converts a device string or object into a canonical torch.device object with an explicit index."""
+    """
+    Converts a device string or object into a canonical torch.device object.
+
+    Ensures that a device string like 'cuda' is converted to its fully
+    indexed form, e.g., 'cuda:0', by checking the current default device.
+
+    :param device: The device identifier to canonicalize.
+    :type device: str | torch.device
+    :return: A torch.device object with an explicit index if applicable.
+    :rtype: torch.device
+    """
     if not isinstance(device, torch.device):
         device = torch.device(device)
 
@@ -55,15 +86,29 @@ def get_canonical_device(device: str | torch.device) -> torch.device:
 # ##################################################################################
 
 @contextlib.contextmanager
-def model_to_target(logger: logging.Logger, model: torch.nn.Module):
+def model_to_target(logger: logging.Logger, model: torch.nn.Module) -> Iterator[None]:
     """
-    Consolidated context manager for model device placement and inference state.
+    A context manager for safe model inference.
 
-    - Moves the model to its designated `model.target_device`.
-    - Sets `torch.backends.cudnn.benchmark` based on `model.cudnn_benchmark_setting` if available.
-    - Sets the model to `eval()` mode.
-    - Wraps the operation in a `torch.no_grad()` context.
-    - Offloads the model to the CPU (`mm.unet_offload_device()`) afterwards.
+    Handles device placement, inference state (`eval()`, `no_grad()`),
+    optional cuDNN benchmark settings, and safe offloading in a `finally` block
+    to ensure resources are managed even if errors occur.
+
+    The model object is expected to have two optional custom attributes:
+    - ``target_device`` (torch.device): The device to run inference on.
+    - ``cudnn_benchmark_setting`` (bool): The desired cuDNN benchmark state.
+
+    Example Usage::
+
+        with model_to_target(logger, my_model):
+            # Your inference code here
+            output = my_model(input_tensor)
+
+    :param logger: A logger instance for logging state changes.
+    :type logger: logging.Logger
+    :param model: The torch.nn.Module to manage.
+    :type model: torch.nn.Module
+    :yield: None
     """
     if not isinstance(model, torch.nn.Module):
         with torch.no_grad():
@@ -138,10 +183,13 @@ def model_to_target(logger: logging.Logger, model: torch.nn.Module):
         # 7. Offload model back to CPU
         if with_comfy:
             offload_device = get_offload_device()
-            current_device_after_yield = next(model.parameters()).device
-            if current_device_after_yield != offload_device:
-                logger.debug(f"Offloading model from `{current_device_after_yield}` to offload device `{offload_device}`.")
-                model.to(offload_device)
-                # Clear cache if we were on a CUDA device
-                if 'cuda' in str(current_device_after_yield):
-                    torch.cuda.empty_cache()
+            try:
+                current_device_after_yield = next(model.parameters()).device
+                if current_device_after_yield != offload_device:
+                    logger.debug(f"Offloading model from `{current_device_after_yield}` to offload device `{offload_device}`.")
+                    model.to(offload_device)
+                    # Clear cache if we were on a CUDA device
+                    if 'cuda' in str(current_device_after_yield):
+                        torch.cuda.empty_cache()
+            except StopIteration:
+                pass  # Model with no parameters doesn't need offloading.
