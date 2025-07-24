@@ -8,7 +8,7 @@ import logging
 import os
 import sys
 from typing import TYPE_CHECKING, Callable
-from .comfy_notification import send_toast_notification
+from .comfy_notification import send_toast_notification, ToastSeverity
 
 
 # 1. This block is ONLY for the type checker.
@@ -98,12 +98,8 @@ def on_log_error_or_warning(logger: logging.Logger, record: logging.LogRecord) -
     This function is called whenever a log with level WARNING or higher is emitted.
     The 'record' object contains all information about the log event.
     """
-    if record.levelno == logging.WARNING:
-        summary = "Warning"
-        severity = "warn"
-    else:
-        summary = "Error"
-        severity = "error"
+    severity: ToastSeverity = "warn" if record.levelno == logging.WARNING else "error"
+    summary = "Warning" if record.levelno == logging.WARNING else "Error"
     send_toast_notification(logger, record.getMessage(), summary=summary, severity=severity)
 
 

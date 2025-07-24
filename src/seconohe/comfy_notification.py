@@ -7,7 +7,7 @@
 # Original code from Gemini 2.5 Pro, which was really outdated
 # Took ideas from Easy Use nodes and looking at ComfyUI code
 import logging
-from typing import Optional
+from typing import Optional, Literal
 # ComfyUI imports
 try:
     from server import PromptServer
@@ -16,27 +16,41 @@ except Exception:
     with_comfy = False
 
 EVENT_NAME = "seconohe-toast"
+ToastSeverity = Literal['success', 'info', 'warn', 'error', 'secondary', 'contrast']
 
 
-def send_toast_notification(logger: logging.Logger, message: str, summary: str = "Warning", severity: str = "warn",
-                            sid: Optional[str] = None):
+def send_toast_notification(logger: logging.Logger, message: str, summary: str = "Warning", severity: ToastSeverity = "warn",
+                            sid: Optional[str] = None) -> None:
     """
-    Sends a toast notification event to the ComfyUI client.
+    Sends a toast notification event to the ComfyUI web client via WebSocket.
 
-    Args:
-        logger (logging.Logger): The logger used in case we need to report an error
-        message (str): The message content of the toast.
-        severity (str): The type of toast. Can be 'success' | 'info' | 'warn' | 'error' | 'secondary' | 'contrast'
-        summary (str): Short explanation
-        sid (str, optional): The session ID of the client to send to.
-                            If None, broadcasts to all clients. Defaults to None.
+    This function communicates with the frontend JavaScript listener for the
+    ``seconohe-toast`` event, triggering a UI notification. It will fail silently
+    if not run within a ComfyUI server environment.
+
+    :param logger: The logger instance to use for reporting errors if the send fails.
+    :type logger: logging.Logger
+    :param message: The main detail message to display in the toast.
+    :type message: str
+    :param summary: A short, bolded summary or title for the toast. Defaults to 'Warning'.
+    :type summary: str
+    :param severity: The style/color of the toast. Must be one of 'success',
+                     'info', 'warn', 'error', 'secondary', or 'contrast'.
+                     Defaults to 'warn'.
+    :type severity: Literal['success', 'info', 'warn', 'error', 'secondary', 'contrast']
+    :param sid: The session ID of a specific client to send the message to.
+                If ``None``, the message is broadcast to all connected clients.
+                Defaults to ``None``.
+    :type sid: Optional[str]
     """
-    # Check we have ComfyUI and the server is running
-    if not with_comfy or not hasattr(PromptServer, 'instance'):
+    # Check if we are in a ComfyUI environment and the server instance is available
+    if not with_comfy or not hasattr(PromptServer, 'instance') or PromptServer.instance is None:
+        logger.debug("Toast notification skipped: Not running in an active ComfyUI server environment.")
         return
     try:
+        # Use the PromptServer instance to send a custom event to the frontend
         PromptServer.instance.send_sync(
-            EVENT_NAME,  # This is our custom event name
+            EVENT_NAME,  # The custom event name the JS is listening for
             {
                 'message': message,
                 'summary': summary,
@@ -45,4 +59,4 @@ def send_toast_notification(logger: logging.Logger, message: str, summary: str =
             sid
         )
     except Exception as e:
-        logger.error(f"when trying to use ComfyUI PromptServer: {e}")
+        logger.error(f"Failed to send toast notification via ComfyUI PromptServer: {e}")
