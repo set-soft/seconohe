@@ -192,6 +192,19 @@ def _download_model_urllib(url: str, save_dir: str, file_name: str):
 
 def download_file(logger: logging.Logger, url: str, save_dir: str, file_name: str, force_urllib: bool = False,
                   kind: str = "model"):
+    """
+    Downloads a file from a URL with progress bars for both console and ComfyUI.
+    Also GUI notification at start and end.
+    We also log the URL and destination to the console.
+
+    Args:
+        logger (logging.Logger): The used logger
+        url (str): The direct download URL for the file.
+        save_dir (str): The directory where the file will be saved.
+        file_name (str): The name of the file to be saved on disk.
+        force_urllib (bool=False): Ignore `requests`
+        kind (str='model'): Kind of file we are downloading, just for the logs
+    """
     logger.info(f"Downloading {kind}: {file_name}")
     logger.info(f"Source URL: {url}")
     full_name = os.path.join(save_dir, file_name)
