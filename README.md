@@ -9,17 +9,17 @@ Other than that you'll find the functionality is really heterogeneous.
 
 ## &#x0001F4D6; Table of Contents
 
-- [&#x0001F3AF; Core Goals](#-core-goals)
-- [&#x26A0;&#xFE0F; Important Remarks for Developers](#&#xFE0F;-important-remarks-for-developers)
+- &#x0001F3AF; [Core Goals](#-core-goals)
+- &#x26A0;&#xFE0F; [Important Remarks for Developers](#&#xFE0F;-important-remarks-for-developers)
   - [Relative Imports](#relative-imports)
   - [Recommended Directory Structure](#recommended-directory-structure)
-- [&#x2728; Included Functionality](#-included-functionality)
-  - [&#x0001F50A; Logger](#-logger)
-  - [&#x0001F35E; ComfyUI Toast Notifications](#-comfyui-toast-notifications)
-  - [&#x0001F4BE; File Downloader](#-file-downloader)
-  - [&#x270D;&#xFE0F; Automatic Node Registration](#&#xFE0F;-automatic-node-registration)
-  - [&#x2699;&#xFE0F; PyTorch Helpers](#&#xFE0F;-pytorch-helpers)
-  - [&#x0001F39B;&#xFE0F; Changing Widget Values](#&#xFE0F;-changing-widget-values)
+- &#x2728; [Included Functionality](#-included-functionality)
+  - &#x0001F50A; [Logger](#-logger)
+  - &#x0001F35E; [ComfyUI Toast Notifications](#-comfyui-toast-notifications)
+  - &#x0001F4BE; [File Downloader](#-file-downloader)
+  - &#x270D;&#xFE0F; [Automatic Node Registration](#&#xFE0F;-automatic-node-registration)
+  - &#x2699;&#xFE0F; [PyTorch Helpers](#&#xFE0F;-pytorch-helpers)
+  - &#x0001F39B;&#xFE0F; [Changing Widget Values](#&#xFE0F;-changing-widget-values)
 - &#x0001F680; [Examples of Nodes Using SeCoNoHe](#-examples-of-nodes-using-seconohe)
 - &#x0001F4DC; [Project History](#-project-history)
 - &#x2696;&#xFE0F; [License](#&#xFE0F;-license)
@@ -64,7 +64,7 @@ Here are some things I learned the hard way that might be useful for other Comfy
 
 For this use a very isolated version of the Python `src` directory structure recommendation.
 
-### Directory structure
+### Recommended Directory Structure
 
 Using what Python calls `src` structure is strongly recommended, why? because most modern Python tools assume this is the case,
 and most of them misserably fail if you don't use it.
@@ -289,7 +289,7 @@ def download_file(logger: logging.Logger, url: str, save_dir: str, file_name: st
 ```
 
 
-### &#x270D;&#xFE0F; Automatic Nodes Registration
+### &#x270D;&#xFE0F; Automatic Node Registration
 
 Manually maintaining the `NODE_CLASS_MAPPINGS` and `NODE_DISPLAY_NAME_MAPPINGS` in `__init__.py` is tedious and error-prone.
 This helper automates the process.
@@ -385,7 +385,7 @@ It also returns a suitable default value. Example:
 Note that this tries to offload the model even if the inference fails. Avoiding the classic VRAM waste after a fail.
 
 
-### &#x0001F39B;&#xFE0F; Changing Widgets Values
+### &#x0001F39B;&#xFE0F; Changing Widget Values
 
 If during the execution of a node you need to change the value assigned to a widget of the node you can use it.
 
