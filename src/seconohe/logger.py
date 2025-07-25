@@ -46,10 +46,26 @@ else:
 
 
 class CustomFormatter(logging.Formatter):
-    """Logging Formatter to add colors"""
+    """
+    A logging Formatter to add colors and switch between ComfyUI and standalone formats.
+
+    This formatter uses different log message formats and colors depending on whether
+    it is running in a standard command-line interface (standalone) or as part of a
+    ComfyUI node. It automatically handles color disabling for non-tty outputs.
+
+    :ivar standalone: If ``True``, uses formats suitable for a standard CLI.
+                      If ``False``, uses formats with a node name prefix for ComfyUI.
+    :vartype standalone: bool
+    """
 
     def __init__(self, name: str) -> None:
-        super(logging.Formatter, self).__init__()
+        """
+        Initializes the formatter with two sets of format strings.
+
+        :param name: The name of the node or tool, used as a prefix in log messages.
+        :type name: str
+        """
+        super().__init__()
         white = Fore.WHITE + Style.BRIGHT
         yellow = Fore.YELLOW + Style.BRIGHT
         red = Fore.RED + Style.BRIGHT
@@ -84,6 +100,7 @@ class CustomFormatter(logging.Formatter):
         self.standalone = False
 
     def set_standalone(self) -> None:
+        """Switches the formatter to standalone (CLI) mode."""
         self.standalone = True
 
     def format(self, record: logging.LogRecord) -> str:
@@ -95,8 +112,15 @@ class CustomFormatter(logging.Formatter):
 
 def on_log_error_or_warning(logger: logging.Logger, record: logging.LogRecord) -> None:
     """
-    This function is called whenever a log with level WARNING or higher is emitted.
-    The 'record' object contains all information about the log event.
+    A callback function that sends a toast notification for WARNING or ERROR logs.
+
+    This function is designed to be attached to a logger via the `WarningAndErrorFilter`.
+    It translates log records into UI notifications for the ComfyUI frontend.
+
+    :param logger: The logger instance that emitted the record.
+    :type logger: logging.Logger
+    :param record: The log record containing event information.
+    :type record: logging.LogRecord
     """
     severity: ToastSeverity = "warn" if record.levelno == logging.WARNING else "error"
     summary = "Warning" if record.levelno == logging.WARNING else "Error"
@@ -105,15 +129,21 @@ def on_log_error_or_warning(logger: logging.Logger, record: logging.LogRecord) -
 
 class WarningAndErrorFilter(logging.Filter):
     """
-    A custom log filter that intercepts logs of a certain level.
+    A custom log filter that intercepts logs at a certain level and triggers a callback.
     """
-    def __init__(self, logger: logging.Logger, callback: Callable, level: int = logging.WARNING):
+    def __init__(self, logger: logging.Logger, callback: Callable[[logging.Logger, logging.LogRecord], None],
+                 level: int = logging.WARNING):
         """
         Initializes the filter.
 
-        Args:
-            callback: The function to call when a log record meets the level criteria.
-            level: The minimum level to trigger the callback.
+        :param logger: The logger instance that this filter will be associated with.
+        :type logger: logging.Logger
+        :param callback: The function to call when a log record meets the level criteria.
+                         It should accept a logger and a LogRecord as arguments.
+        :type callback: Callable[[logging.Logger, logging.LogRecord], None]
+        :param level: The minimum logging level to trigger the callback.
+                      Defaults to ``logging.WARNING``.
+        :type level: int
         """
         super().__init__()
         self._callback = callback
@@ -122,7 +152,16 @@ class WarningAndErrorFilter(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         """
-        This method is called for every log record.
+        This method is called for every log record passed to the logger.
+
+        If the record's level is at or above the filter's threshold, it triggers
+        the callback. It always returns ``True`` to allow the record to be
+        processed by subsequent handlers.
+
+        :param record: The log record to be processed.
+        :type record: logging.LogRecord
+        :return: ``True`` to allow the record to pass to the next handler.
+        :rtype: bool
         """
         # Check if the log level is WARNING or higher
         if record.levelno >= self._level:
@@ -137,6 +176,19 @@ class WarningAndErrorFilter(logging.Filter):
 # Logger setup
 # ######################
 def initialize_logger(name: str) -> logging.Logger:
+    """
+    Initializes and configures a logger for a SeCoNoHe-compatible node or tool.
+
+    This function creates a logger with a custom color formatter and a filter
+    that forwards warnings and errors as UI toast notifications. It also sets
+    the logging level based on ComfyUI's global settings and a custom
+    environment variable (`{NAME}_NODES_DEBUG`).
+
+    :param name: The name for the logger, typically the name of the node suite.
+    :type name: str
+    :return: The configured logger instance.
+    :rtype: logging.Logger
+    """
     # Create a new logger
     logger = logging.getLogger(name)
     logger.propagate = False
@@ -179,9 +231,20 @@ def initialize_logger(name: str) -> logging.Logger:
 
 
 def logger_set_standalone(logger: logging.Logger, args: argparse.Namespace) -> None:
-    """ Change the logger to standalone CLI mode.
-        args.verbose is the verbosity level
-        args.quiet is the optional quiet mode (warning level) """
+    """
+    Switches a logger to standalone (CLI) mode and sets its verbosity.
+
+    This should be called by command-line tools after parsing arguments. It
+    configures the logger's formatter for standard console output and sets the
+    logging level based on verbosity flags.
+
+    :param logger: The logger instance to modify.
+    :type logger: logging.Logger
+    :param args: The parsed arguments object from `argparse`. Expected to have
+                 a ``verbose`` attribute (int) and an optional ``quiet``
+                 attribute (bool).
+    :type args: argparse.Namespace
+    """
     if hasattr(logger, 'custom_formatter'):
         logger.custom_formatter.set_standalone()
     if hasattr(args, 'quiet'):
@@ -192,9 +255,33 @@ def logger_set_standalone(logger: logging.Logger, args: argparse.Namespace) -> N
 
 
 def get_debug_level(logger: logging.Logger) -> int:
+    """
+    Calculates the custom verbosity level based on the logger's effective level.
+
+    Assumes that higher verbosity corresponds to a lower logging level number
+    (e.g., DEBUG=10, DEBUG-1=9 for level 2, etc.).
+
+    :param logger: The logger instance to check.
+    :type logger: logging.Logger
+    :return: An integer representing the debug verbosity level (1, 2, ...).
+    :rtype: int
+    """
     return logging.DEBUG - logger.getEffectiveLevel() + 1
 
 
-def debugl(logger: logging.Logger, level: int, msg: str) -> None:
+def debugl(logger: logging.Logger, level: int, msg: str, *args, **kwargs) -> None:
+    """
+    Logs a message with `logger.debug` but only if the logger's verbosity is
+    at or above the specified level.
+
+    :param logger: The logger instance to use.
+    :type logger: logging.Logger
+    :param level: The required verbosity level to display this message.
+    :type level: int
+    :param msg: The log message string.
+    :type msg: str
+    :param args: Positional arguments for the log message.
+    :param kwargs: Keyword arguments for the log message.
+    """
     if get_debug_level(logger) >= level:
-        logger.debug(msg)
+        logger.debug(msg, *args, **kwargs)
