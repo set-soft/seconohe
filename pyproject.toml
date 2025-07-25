@@ -62,13 +62,15 @@ ignore_missing_imports = true
 
 # Tell mypy to ignore errors from third-party libraries if they are not typed
 [[tool.mypy.overrides]]
-module = "torch.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "torchaudio.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "pytest.*"
+module = [
+    "torch.*",
+    "torchaudio.*",
+    "pytest.*",
+    "cv2.*",
+    "colorama.*",
+    "tqdm.*",
+    "requests.*",
+    "comfy.*", # For comfy.utils
+    "server.*" # For server.PromptServer
+]
 ignore_missing_imports = true
