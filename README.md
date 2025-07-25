@@ -149,6 +149,11 @@ Using this you won't get:
 
 ## &#x2728; Included Functionality
 
+Here you'll find an explanation of the functionality.
+
+A full reference can be found [here](https://set-soft.github.io/seconohe/seconohe.html).
+
+
 ### &#x0001F50A; Logger
 
 The ComfyUI console logs are a nightmare, and I don't want to make it worst, so I use a logger that:
