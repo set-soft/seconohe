@@ -1,3 +1,6 @@
+"""
+.. include:: ../../README.md
+"""
 import os
 
 

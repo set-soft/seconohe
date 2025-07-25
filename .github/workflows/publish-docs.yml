@@ -1,0 +1,62 @@
+name: Publish Documentation to GitHub Pages
+
+# Run this workflow on pushes to the main branch
+on:
+  push:
+    branches:
+      - main # Or your default branch (e.g., master, develop)
+
+# Permissions needed for the deployment action to work
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  # A single job to build and deploy the documentation
+  deploy:
+    # Use a standard Ubuntu runner
+    runs-on: ubuntu-latest
+
+    # Configure the environment for GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }} # The deployed URL will be an output of the job
+
+    steps:
+      # Step 1: Check out the repository's code
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          # Optional: Caching pip dependencies can speed up subsequent runs
+          cache: 'pip'
+
+      # Step 3: Install all dependencies
+      # This includes your project in editable mode and its dev dependencies (like pdoc).
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Install the project itself in editable mode so pdoc can find the 'seconohe' module
+          pip install -e ".[dev]"
+
+      # Step 4: Generate the documentation using the Makefile
+      # This is the core step that now mirrors your local command.
+      - name: Generate documentation
+        run: make docs
+
+      # Step 5: Upload the generated HTML files as a Pages artifact
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # The path should match the DOCS_DIR variable in your Makefile (e.g., ./docs)
+          path: ./docs
+
+      # Step 6: Deploy the artifact to GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

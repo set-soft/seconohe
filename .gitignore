@@ -20,3 +20,4 @@ dist/
 
 *.epr
 .*.dst
+docs/

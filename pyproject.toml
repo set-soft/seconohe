@@ -21,6 +21,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "pdoc",
     "mypy",
 ]
 better_dl = ["requests"]
