@@ -13,7 +13,7 @@ try:
 except Exception:
     with_comfy = False
 
-EVENT_NAME = "seconohe-node"
+_EVENT_NAME = "seconohe-node"
 # Define the known actions as a Literal for better type checking and auto-completion
 NodeAction = Literal["change_widget"]
 
@@ -64,7 +64,7 @@ def send_node_action(logger: logging.Logger, action: str, arg1: Any = None, arg2
             'arg1': arg1,
             'arg2': arg2
         }
-        PromptServer.instance.send_sync(EVENT_NAME, payload, sid)
+        PromptServer.instance.send_sync(_EVENT_NAME, payload, sid)
         logger.debug(f"Sent node action: {payload}")
     except Exception as e:
         logger.error(f"Failed to send node action via ComfyUI PromptServer: {e}")

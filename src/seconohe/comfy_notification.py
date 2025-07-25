@@ -15,7 +15,7 @@ try:
 except Exception:
     with_comfy = False
 
-EVENT_NAME = "seconohe-toast"
+_EVENT_NAME = "seconohe-toast"
 ToastSeverity = Literal['success', 'info', 'warn', 'error', 'secondary', 'contrast']
 
 
@@ -50,7 +50,7 @@ def send_toast_notification(logger: logging.Logger, message: str, summary: str =
     try:
         # Use the PromptServer instance to send a custom event to the frontend
         PromptServer.instance.send_sync(
-            EVENT_NAME,  # The custom event name the JS is listening for
+            _EVENT_NAME,  # The custom event name the JS is listening for
             {
                 'message': message,
                 'summary': summary,

@@ -121,7 +121,7 @@ def _download_model_requests(logger: logging.Logger, url: str, save_dir: str, fi
 
 
 # A simple version implemented using the Python urllib
-class Downloader:
+class _Downloader:
     def __init__(self, model_path, model_name):
         self.model_path = model_path
         self.model_name = model_name
@@ -131,7 +131,7 @@ class Downloader:
 
     # A TQDM helper class for urlretrieve reporthook
     # This is a common pattern for this use case.
-    class TqdmUpTo(tqdm):
+    class _TqdmUpTo(tqdm):
         """
         Provides `update_to(block_num, block_size, total_size)`
         and updates the TQDM bar.
@@ -172,9 +172,9 @@ class Downloader:
             # Get filename for tqdm description
             filename = self.model_name
 
-            # Use TqdmUpTo as a context manager
-            with self.TqdmUpTo(unit='iB', unit_scale=True, unit_divisor=1024, miniters=1,
-                               desc=f"Downloading {filename}") as t:
+            # Use _TqdmUpTo as a context manager
+            with self._TqdmUpTo(unit='iB', unit_scale=True, unit_divisor=1024, miniters=1,
+                                desc=f"Downloading {filename}") as t:
                 # urlretrieve(url, filename=None, reporthook=None, data=None)
                 # reporthook is called with (block_num, block_size, total_size)
                 urlretrieve(url, self.model_full_name, reporthook=t.update_to)
@@ -196,7 +196,7 @@ class Downloader:
 
 
 def _download_model_urllib(url: str, save_dir: str, file_name: str):
-    return Downloader(save_dir, file_name).download_model(url)
+    return _Downloader(save_dir, file_name).download_model(url)
 
 
 def download_file(logger: logging.Logger, url: str, save_dir: str, file_name: str, force_urllib: bool = False,

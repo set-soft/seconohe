@@ -34,11 +34,11 @@ else:
         colorama_init()
     except ImportError:
         # If the import fails, import our fallback module
-        from . import ansi
+        from . import _ansi
         # Assign the names from our fallback module's namespace
-        Fore = ansi.Fore
-        Back = ansi.Back
-        Style = ansi.Style
+        Fore = _ansi.Fore
+        Back = _ansi.Back
+        Style = _ansi.Style
 
         # Define a dummy init function to ensure it always exists
         def colorama_init() -> None:
@@ -285,3 +285,6 @@ def debugl(logger: logging.Logger, level: int, msg: str, *args, **kwargs) -> Non
     """
     if get_debug_level(logger) >= level:
         logger.debug(msg, *args, **kwargs)
+
+
+__all__ = ['initialize_logger', 'logger_set_standalone', 'get_debug_level', 'debugl']
