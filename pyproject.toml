@@ -30,6 +30,10 @@ better_color = ["colorama"]
 [tool.setuptools.dynamic]
 version = {attr = "src.seconohe.__version__"}
 
+[project.urls]
+repository = "https://github.com/set-soft/seconohe"
+documentation = "https://set-soft.github.io/seconohe/seconohe.html"
+
 
 # #######################################
 # Flake8
