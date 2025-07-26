@@ -6,10 +6,14 @@
 import inspect
 import logging
 import types
-from typing import List, Tuple, Type
+from typing import List, Tuple, Type, Optional
 
 
-def register_nodes(logger: logging.Logger, modules: List[types.ModuleType]) -> Tuple[dict[str, Type], dict[str, str]]:
+def register_nodes(
+    logger: logging.Logger,
+    modules: List[types.ModuleType],
+    version: Optional[str] = None
+) -> Tuple[dict[str, Type], dict[str, str]]:
     """
     Scans a list of modules to discover and register ComfyUI node classes.
 
@@ -32,6 +36,8 @@ def register_nodes(logger: logging.Logger, modules: List[types.ModuleType]) -> T
     :type logger: logging.Logger
     :param modules: A list of Python module objects to scan for nodes.
     :type modules: List[types.ModuleType]
+    :param version: The version of the nodes, when provided is included in the logs.
+    :type version: Optional[str]
     :return: A tuple containing NODE_CLASS_MAPPINGS and NODE_DISPLAY_NAME_MAPPINGS.
     :rtype: Tuple[dict[str, Type], dict[str, str]]
     """
@@ -76,7 +82,8 @@ def register_nodes(logger: logging.Logger, modules: List[types.ModuleType]) -> T
             node_class_mappings[unique_name] = obj
             node_display_name_mappings[unique_name] = display_name + suffix
 
-    logger.info(f"Registering {len(node_class_mappings)} node(s).")
+    version_str = f" for version {version}" if version is not None else ""
+    logger.info(f"Registering {len(node_class_mappings)} node(s){version_str}.")
     logger.debug(f"Registered display names: {list(node_display_name_mappings.values())}")
 
     return node_class_mappings, node_display_name_mappings
