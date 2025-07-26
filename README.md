@@ -415,6 +415,8 @@ Note that you must register the JS extensions like with the [Toast Notifications
 ## &#x0001F4DC; Project History
 
 - 1.0.0 2025-07-24: Initial release.
+- 1.0.1 2025-07-25: Better typing hints and docs
+- 1.0.2 2025-07-26: Optional version info when registering the nodes
 
 
 ## &#x2696;&#xFE0F; License

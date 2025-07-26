@@ -4,5 +4,5 @@
 import os
 
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 JS_PATH = os.path.join(os.path.dirname(__file__), "js")
