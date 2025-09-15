@@ -20,6 +20,7 @@ Other than that you'll find the functionality is really heterogeneous.
   - &#x270D;&#xFE0F; [Automatic Node Registration](#&#xFE0F;-automatic-node-registration)
   - &#x2699;&#xFE0F; [PyTorch Helpers](#&#xFE0F;-pytorch-helpers)
   - &#x0001F39B;&#xFE0F; [Changing Widget Values](#&#xFE0F;-changing-widget-values)
+  - [Color parser](#color-parser)
 - &#x0001F680; [Examples of Nodes Using SeCoNoHe](#-examples-of-nodes-using-seconohe)
 - &#x0001F4DC; [Project History](#-project-history)
 - &#x2696;&#xFE0F; [License](#&#xFE0F;-license)
@@ -403,6 +404,28 @@ send_node_action(logger, "change_widget", WIDGET_NAME, NEW_VALUE)
 ```
 
 Note that you must register the JS extensions like with the [Toast Notifications](#-comfyui-toast-notifications).
+
+
+### Color parser
+
+To convert a color string into its components:
+
+- `color_to_rgb_uint8` the returned components are integers in the [0, 255] range
+- `color_to_rgb_float` the returned components are floats in the [0, 1] range
+
+The color can be represented using:
+
+- An hexadecimal RGB value: `#RRGGBB` or `RRGGBB`, like in web applications, i.e. `#AB8020`
+- Comma separated integers: `r, g, b`, i.e. `171,128,32`
+- Comma separated floats: `r, g, b`, i.e. `0.67,0.5,0.13`
+
+
+Features:
+
+- Spaces at the beginning, end or around the commas are supported
+- Uppercase and lowercase hexadecimals
+- A single value is promoted to a gray scale, i.e. 128 -> `128,128,128`
+- If blue is 0 you can just use `0.67,0.5`
 
 
 ## &#x0001F680; Examples of Nodes Using SeCoNoHe
