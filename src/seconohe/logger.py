@@ -209,7 +209,7 @@ def initialize_logger(name: str) -> logging.Logger:
     effective_comfy_level = logging.getLogger().getEffectiveLevel()
 
     # Check our custom environment variable for more verbosity
-    NODES_DEBUG_VAR = name.upper() + "_NODES_DEBUG"
+    NODES_DEBUG_VAR = name.replace('-', '_').upper() + "_NODES_DEBUG"
     try:
         nodes_debug_env = int(os.environ.get(NODES_DEBUG_VAR, "0"))
     except ValueError:
