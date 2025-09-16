@@ -70,6 +70,7 @@ ignore_missing_imports = true
 module = [
     "torch.*",
     "torchaudio.*",
+    "torchvision.*",
     "pytest.*",
     "cv2.*",
     "colorama.*",
