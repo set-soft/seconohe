@@ -21,6 +21,7 @@ Other than that you'll find the functionality is really heterogeneous.
   - &#x2699;&#xFE0F; [PyTorch Helpers](#&#xFE0F;-pytorch-helpers)
   - &#x0001F39B;&#xFE0F; [Changing Widget Values](#&#xFE0F;-changing-widget-values)
   - [Color parser](#color-parser)
+  - [Apply Mask](#apply-mask)
 - &#x0001F680; [Examples of Nodes Using SeCoNoHe](#-examples-of-nodes-using-seconohe)
 - &#x0001F4DC; [Project History](#-project-history)
 - &#x2696;&#xFE0F; [License](#&#xFE0F;-license)
@@ -426,6 +427,14 @@ Features:
 - Uppercase and lowercase hexadecimals
 - A single value is promoted to a gray scale, i.e. 128 -> `128,128,128`
 - If blue is 0 you can just use `0.67,0.5`
+
+
+### Apply Mask
+
+The `affce.py` file implements the [Approximate Fast Foreground Colour Estimation](https://github.com/Photoroom/fast-foreground-estimation)
+algorithm to apply a mask to an image.
+
+The `appy_mask.py` provides a wrapper to implement a node that uses AFFCE.
 
 
 ## &#x0001F680; Examples of Nodes Using SeCoNoHe
