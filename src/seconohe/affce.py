@@ -10,13 +10,14 @@
 # https://github.com/ZhengPeng7/BiRefNet/blob/main/image_proc.py
 import torch
 import torchvision.transforms.functional as TF
+from typing import Tuple
 
 
 # ==============================================================================
 # Implementation of cv2.blur using PyTorch (Gemini 2.5 Pro)
 # ==============================================================================
 
-def _pad_reflect_101(tensor, padding):
+def _pad_reflect_101(tensor: torch.Tensor, padding: Tuple[int, int, int, int]) -> torch.Tensor:
     """ A correct manual implementation of OpenCV's default BORDER_REFLECT_101 padding.
         Expects BCHW. """
     pad_left, pad_right, pad_top, pad_bottom = padding
@@ -32,7 +33,7 @@ def _pad_reflect_101(tensor, padding):
     return tensor
 
 
-def _blur_torch(tensor, kernel_size):
+def _blur_torch(tensor: torch.Tensor, kernel_size: int) -> torch.Tensor:
     """
     PyTorch replacement for the default cv2.blur().
     Input: Tensor of shape (B, C, H, W)
@@ -55,7 +56,7 @@ def _blur_torch(tensor, kernel_size):
     return blurred_tensor
 
 
-def _refine_foreground_tensor_batch(images, masks, r1=90, r2=6):
+def _refine_foreground_tensor_batch(images: torch.Tensor, masks: torch.Tensor, r1: int = 90, r2: int = 6) -> torch.Tensor:
     """
     A fully vectorized, tensor-based implementation of the foreground refinement.
 
@@ -74,7 +75,13 @@ def _refine_foreground_tensor_batch(images, masks, r1=90, r2=6):
     return estimated_foreground
 
 
-def _fb_blur_fusion_batch(image, F, B, alpha, r=90):
+def _fb_blur_fusion_batch(
+    image: torch.Tensor,
+    F: torch.Tensor,
+    B: torch.Tensor,
+    alpha: torch.Tensor,
+    r: int = 90
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """ Core algorithm, fully tensorized for batch processing. """
     # alpha is (B, 1, H, W), other tensors are (B, 3, H, W)
 
@@ -96,7 +103,7 @@ def _fb_blur_fusion_batch(image, F, B, alpha, r=90):
     return F_new, blurred_B
 
 
-def affce(images_bhwc, masks_bhw, r1=90, r2=6):
+def affce(images_bhwc: torch.Tensor, masks_bhw: torch.Tensor, r1: int = 90, r2: int = 6) -> torch.Tensor:
     """
     The public-facing wrapper for ComfyUI.
     Handles the conversion from BHWC to BCHW and back.

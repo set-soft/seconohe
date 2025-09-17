@@ -5,12 +5,14 @@
 #
 # Apply a mask to an image using "Approximate Fast Foreground Colour Estimation"
 # Most of the code is from https://github.com/lldacing/ComfyUI_BiRefNet_ll
+import logging
 import torch
+from typing import Optional
 from .affce import affce
 from .color import color_to_rgb_float
 
 
-def add_mask_as_alpha(image, mask):
+def add_mask_as_alpha(image: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
     """
     Add the (b, h, w) shaped mask as the 4th channel (alpha channel) of the (b, h, w, 3) shaped image.
     """
@@ -31,7 +33,16 @@ def add_mask_as_alpha(image, mask):
     return image_with_alpha
 
 
-def apply_mask(logger, images, masks, device, blur_size=91, blur_size_two=7, fill_color=False, color=None):
+def apply_mask(
+    logger: logging.Logger,
+    images: torch.Tensor,
+    masks: torch.Tensor,
+    device: torch.device,
+    blur_size: int = 91,
+    blur_size_two: int = 7,
+    fill_color: bool = False,
+    color: Optional[str] = None
+) -> torch.Tensor:
     b, h, w, c = images.shape
     if b != masks.shape[0]:
         raise ValueError("images and masks must have the same batch size")
