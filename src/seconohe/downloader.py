@@ -21,10 +21,14 @@ from tqdm import tqdm
 try:
     import comfy.utils
     with_comfy = True
+    from .comfy_notification import send_toast_notification
 except ImportError:
     with_comfy = False
-# Local imports
-from .comfy_notification import send_toast_notification
+
+    def send_toast_notification(logger, msg, kind, extra=''):
+        pass
+USER_AGENT = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
+              ' Chrome/58.0.3029.110 Safari/537.36')
 
 
 def _download_model_requests(logger: logging.Logger, url: str, save_dir: str, file_name: str) -> str:
@@ -50,8 +54,10 @@ def _download_model_requests(logger: logging.Logger, url: str, save_dir: str, fi
     # Ensure the save directory exists
     os.makedirs(save_dir, exist_ok=True)
     try:
+        # Define headers to mimic a browser
+        headers = {'User-Agent': USER_AGENT}
         # Use a streaming request to handle large files and get content length
-        with requests.get(url, stream=True, timeout=10) as r:
+        with requests.get(url, stream=True, timeout=10, headers=headers) as r:
             r.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
 
             # Get total file size from headers
@@ -245,3 +251,11 @@ def download_file(logger: logging.Logger, url: str, save_dir: str, file_name: st
 
     logger.info(f"Successfully downloaded {full_name}")
     return full_name
+
+
+if __name__ == '__main__':
+    # download_file(logging.getLogger(__name__), 'https://i.pinimg.com/736x/c8/23/6d/c8236d1fbabec05abd13d19ddd8e516e.jpg',
+    #               '.', 'test.jpg', force_urllib=False, kind="image")
+    download_file(logging.getLogger(__name__), 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/'
+                  'Balearica_regulorum_1_Luc_Viatour.jpg/1080px-Balearica_regulorum_1_Luc_Viatour.jpg',
+                  '.', 'test.jpg', force_urllib=False, kind="image")
