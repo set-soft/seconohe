@@ -63,7 +63,7 @@ def _download_model_requests(logger: logging.Logger, url: str, save_dir: str, fi
             # Get total file size from headers
             total_size_in_bytes = int(r.headers.get('content-length', 0))
             # Download 200 blocks at most, ComfyUI 0.3.57 does a sync draw so it gets slow if we ask for thousands of updates
-            block_size = max(total_size_in_bytes // 200, 1024)
+            block_size = max(total_size_in_bytes // 200, 65536)
 
             # --- Setup Progress Bars ---
             # Console progress bar using tqdm
