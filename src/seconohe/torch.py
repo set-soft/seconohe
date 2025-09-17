@@ -7,12 +7,13 @@
 import contextlib  # For context manager
 import logging
 import torch
-from typing import Optional, Iterator, cast
+from typing import Optional, Iterator, cast, Union
 try:
     import comfy.model_management as mm
     with_comfy = True
 except Exception:
     with_comfy = False
+from .misc import format_bytes
 
 
 def get_torch_device_options() -> tuple[list[str], str]:
@@ -79,6 +80,37 @@ def get_canonical_device(device: str | torch.device) -> torch.device:
         # The first solution is often better as it doesn't need this.
         return torch.device(f'cuda:{torch.cuda.current_device()}')
     return device
+
+
+def get_pytorch_memory_usage_str(device: Optional[Union[int, torch.device]] = None) -> str:
+    """
+    Returns a formatted string detailing PyTorch's current and peak memory usage on a given CUDA device.
+
+    Args:
+        device (Optional[Union[int, torch.device]]): The CUDA device to query.
+                                                     If None, uses the current device.
+
+    Returns:
+        str: A formatted, multi-line string with memory usage details.
+    """
+    if not torch.cuda.is_available():
+        return "CUDA is not available. No GPU memory to report."
+
+    # Resolve the device
+    if device is None:
+        device = torch.cuda.current_device()
+
+    # Get memory stats
+    allocated = torch.cuda.memory_allocated(device)
+    reserved = torch.cuda.memory_reserved(device)
+    peak_allocated = torch.cuda.max_memory_allocated(device)
+    peak_reserved = torch.cuda.max_memory_reserved(device)
+
+    # Format into a string
+    return (
+        f"Allocated/Reserved: {format_bytes(allocated):>10s}/{format_bytes(reserved):>10s}"
+        f" (Peak: {format_bytes(peak_allocated):>10s}/{format_bytes(peak_reserved):>10s})\n"
+    )
 
 
 # ##################################################################################
