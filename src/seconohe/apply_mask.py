@@ -41,7 +41,8 @@ def apply_mask(
     blur_size: int = 91,
     blur_size_two: int = 7,
     fill_color: bool = False,
-    color: Optional[str] = None
+    color: Optional[str] = None,
+    batched: bool = True
 ) -> torch.Tensor:
     b, h, w, c = images.shape
     if b != masks.shape[0]:
@@ -51,7 +52,7 @@ def apply_mask(
     masks_on_device = masks.to(device)
 
     # Approximate Fast Foreground Colour Estimation
-    _image_masked_tensor = affce(images_on_device, masks_on_device)
+    _image_masked_tensor = affce(images_on_device, masks_on_device, r1=blur_size, r2=blur_size_two, batched=batched)
 
     if fill_color and color is not None:
         color = color_to_rgb_float(logger, color)

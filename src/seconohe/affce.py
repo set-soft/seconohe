@@ -103,7 +103,7 @@ def _fb_blur_fusion_batch(
     return F_new, blurred_B
 
 
-def affce(images_bhwc: torch.Tensor, masks_bhw: torch.Tensor, r1: int = 90, r2: int = 6) -> torch.Tensor:
+def affce(images_bhwc: torch.Tensor, masks_bhw: torch.Tensor, r1: int = 90, r2: int = 6, batched: bool = True) -> torch.Tensor:
     """
     The public-facing wrapper for ComfyUI.
     Handles the conversion from BHWC to BCHW and back.
@@ -117,7 +117,13 @@ def affce(images_bhwc: torch.Tensor, masks_bhw: torch.Tensor, r1: int = 90, r2: 
     masks_bchw = masks_bhw.unsqueeze(1)
 
     # 2. Call the internal engine which operates efficiently on BCHW
-    result_bchw = _refine_foreground_tensor_batch(images_bchw, masks_bchw, r1, r2)
+    if batched:
+        result_bchw = _refine_foreground_tensor_batch(images_bchw, masks_bchw, r1, r2)
+    else:
+        imgs = []
+        for i in range(images_bchw.shape[0]):
+            imgs.append(_refine_foreground_tensor_batch(images_bchw[i].unsqueeze(0), masks_bchw[i].unsqueeze(0), r1, r2))
+        result_bchw = torch.cat(imgs, dim=0)
 
     # 3. Convert the final result from BCHW back to BHWC (once)
     result_bhwc = result_bchw.permute(0, 2, 3, 1)
