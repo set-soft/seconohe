@@ -6,6 +6,36 @@
 # String to color tuple conversion
 import logging
 import re
+COLORS_BY_NAME = {
+    # Monochrome
+    "black": (0.0, 0.0, 0.0),
+    "white": (255.0, 255.0, 255.0),
+    "gray": (128.0, 128.0, 128.0),
+    "grey": (128.0, 128.0, 128.0),  # Common alternative spelling
+    "silver": (192.0, 192.0, 192.0),
+
+    # Pymatting green
+    "green_ck": (120.0, 255.0, 155.0),
+
+    # Primary (RGB)
+    "red": (255.0, 0.0, 0.0),
+    "green": (0.0, 255.0, 0.0),
+    "blue": (0.0, 0.0, 255.0),
+
+    # Secondary (CMY)
+    "yellow": (255.0, 255.0, 0.0),
+    "cyan": (0.0, 255.0, 255.0),
+    "magenta": (255.0, 0.0, 255.0),
+
+    # Other Common Colors
+    "orange": (255.0, 165.0, 0.0),
+    "purple": (128.0, 0.0, 128.0),
+    "pink": (255.0, 192.0, 203.0),
+    "brown": (165.0, 42.0, 42.0),
+    "olive": (128.0, 128.0, 0.0),
+    "teal": (0.0, 128.0, 128.0),
+    "navy": (0.0, 0.0, 128.0),
+}
 
 
 def color_to_rgb(logger: logging.Logger, color_str: str) -> tuple[float, float, float]:
@@ -17,10 +47,14 @@ def color_to_rgb(logger: logging.Logger, color_str: str) -> tuple[float, float, 
     :param color_str: The string to convert.
     :return: A tuple with R, G, B components as floats, clamped to the 0-255 range.
     """
-    s = str(color_str).strip()
+    s = str(color_str).strip().lower()
 
-    # --- 1. Hexadecimal Parsing Block ---
-    hex_s = s.lower()
+    # --- 1. A few colors by name
+    if s in COLORS_BY_NAME:
+        return COLORS_BY_NAME[s]
+
+    # --- 2. Hexadecimal Parsing Block ---
+    hex_s = s
     if hex_s.startswith('#'):
         hex_s = hex_s[1:]
 
@@ -28,7 +62,7 @@ def color_to_rgb(logger: logging.Logger, color_str: str) -> tuple[float, float, 
         # Hex always directly converts to the 0-255 integer range.
         return tuple(float(int(hex_s[i:i+2], 16)) for i in (0, 2, 4))[0:3]
 
-    # --- 2. Component Parsing Block ---
+    # --- 3. Component Parsing Block ---
     try:
         parts = [float(p.strip()) for p in s.split(',')]
     except (ValueError, TypeError):
