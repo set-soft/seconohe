@@ -21,7 +21,7 @@ Other than that you'll find the functionality is really heterogeneous.
   - &#x2699;&#xFE0F; [PyTorch Helpers](#&#xFE0F;-pytorch-helpers)
   - &#x0001F39B;&#xFE0F; [Changing Widget Values](#&#xFE0F;-changing-widget-values)
   - [Color parser](#color-parser)
-  - [Apply Mask](#apply-mask)
+  - [Foreground estimation](#foreground-estimation)
 - &#x0001F680; [Examples of Nodes Using SeCoNoHe](#-examples-of-nodes-using-seconohe)
 - &#x0001F4DC; [Project History](#-project-history)
 - &#x2696;&#xFE0F; [License](#&#xFE0F;-license)
@@ -429,12 +429,24 @@ Features:
 - If blue is 0 you can just use `0.67,0.5`
 
 
-### Apply Mask
+### Foreground estimation
 
-The `affce.py` file implements the [Approximate Fast Foreground Colour Estimation](https://github.com/Photoroom/fast-foreground-estimation)
-algorithm to apply a mask to an image.
+When using background removal models we get a mask that can help to separate the foreground from the background.
+The problem is that when we change th background we get part of the old background at the edges.
+This problem is well explained in the [Fast Multi-Level Foreground Estimation](https://arxiv.org/abs/2006.14970) paper.
 
-The `appy_mask.py` provides a wrapper to implement a node that uses AFFCE.
+In order to replace the background we need to estimate the actual foreground. We implement two algorithms:
+
+1. Fast Multi-Level Foreground Estimation: from [PyMatting](https://github.com/pymatting/pymatting). Is very good, but somehow slow.
+   The authors uses [Numba](https://numba.pydata.org/) to accelerate it. This is an excellent solution. SeCoNoHe also adds a PyTorch
+   approximation to the algorithm. So you don't even need Numba installed.
+   A wrapper is provided to select the best available backend.
+   See `seconohe.foreground_estimation.fmlfe`
+2. [Approximate Fast Foreground Colour Estimation](https://github.com/Photoroom/fast-foreground-estimation). A really fast method.
+   The original code uses OpenCV, here we have a full PyTorch implementation. See `seconohe.foreground_estimation.affce`
+
+The `appy_mask.py` provides a wrapper to AFFCE to implement a node. It can add a solid-color background or just created a refined
+alpha channel.
 
 
 ## &#x0001F680; Examples of Nodes Using SeCoNoHe

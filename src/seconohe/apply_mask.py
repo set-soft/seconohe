@@ -8,7 +8,7 @@
 import logging
 import torch
 from typing import Optional
-from .affce import affce
+from .foreground_estimation.affce import affce
 from .color import color_to_rgb_float
 
 
@@ -25,8 +25,6 @@ def add_mask_as_alpha(image: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
     # Expand the mask to (b, h, w, 1)
     mask = mask[..., None]
 
-    # Without dot multiplication, there may be edge contours
-    # image = image * mask
     # Concatenate image and mask into (b, h, w, 4)
     image_with_alpha = torch.cat([image, mask], dim=-1)
 

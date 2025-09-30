@@ -5,9 +5,11 @@
 #
 # Approximate Fast Foreground Colour Estimation
 # https://ieeexplore.ieee.org/document/9506164
+# DOI: 10.1109/ICIP42928.2021.9506164
 # https://github.com/Photoroom/fast-foreground-estimation
 # From BiRefNet implementation
 # https://github.com/ZhengPeng7/BiRefNet/blob/main/image_proc.py
+# Adapted to only use PyTorch (no need for OpenCV) using Gemini 2.5 Pro
 import torch
 import torchvision.transforms.functional as TF
 from typing import Tuple
