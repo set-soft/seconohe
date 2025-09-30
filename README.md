@@ -1,5 +1,7 @@
 # SeCoNoHe (SET's ComfyUI Node Helpers)
 
+[Full docs](https://set-soft.github.io/seconohe/seconohe.html)
+
 I have a few ComfyUI custom nodes that I wrote, and I started to repeat the same `utils` over and over on each node.
 Soon realized it was a waste of resources and a change or fix in one of the `utils` was hard to apply to all the nodes.
 So I separated them as a Python module available from PyPi.
