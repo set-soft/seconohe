@@ -1,7 +1,7 @@
 #!/usr/bin/make
 
 DOCS_DIR := ./docs
-EXCLUDED = _ansi foreground_estimation.fmlfe_cupy foreground_estimation.fmlfe_numba foreground_estimation.fmlfe_opencl
+EXCLUDED = _ansi foreground_estimation.fmlfe_cupy foreground_estimation.fmlfe_numba foreground_estimation.fmlfe_pyopencl
 EXCLUDED_V = $(addprefix -e seconohe., $(EXCLUDED))
 
 .PHONY: docs clean-docs
