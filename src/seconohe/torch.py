@@ -16,12 +16,15 @@ except Exception:
 from .misc import format_bytes
 
 
-def get_torch_device_options() -> tuple[list[str], str]:
+def get_torch_device_options(with_auto: Optional[bool] = False) -> tuple[list[str], str]:
     """
     Detects available PyTorch devices and returns a list and a suitable default.
 
     Scans for CPU, CUDA devices, and MPS (for Apple Silicon), providing a list
     of device strings (e.g., 'cpu', 'cuda', 'cuda:0') and a recommended default.
+
+    :param with_auto: The first option is 'AUTO', intended to use the current ComfyUI device
+    :type with_auto: bool (optional)
 
     :return: A tuple containing the list of available device strings and the
              recommended default device string.
@@ -41,6 +44,9 @@ def get_torch_device_options() -> tuple[list[str], str]:
         options.append("mps")
         if default == "cpu":
             default = "mps"
+    # AUTO means: the one used by ComfyUI
+    if with_auto:
+        options.insert(0, "AUTO")
     return options, default
 
 
