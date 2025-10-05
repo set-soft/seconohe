@@ -463,6 +463,12 @@ alpha channel.
 - 1.0.0 2025-07-24: Initial release.
 - 1.0.1 2025-07-25: Better typing hints and docs
 - 1.0.2 2025-07-26: Optional version info when registering the nodes
+- 1.0.3 2025-10-05:
+   - Better download: resume, less updates in the GUI, declare a common user agent to avoid 403 errors
+   - Added "Fast Multi-Level Foreground Estimation" (from [PyMatting](https://github.com/pymatting/pymatting)) and "Approximate Fast Foreground Colour Estimation" (from [Photoroom](https://github.com/Photoroom/fast-foreground-estimation))
+   - Added mechanism to apply a mask to an image
+   - Added PyTorch memory usage
+   - Added code to convert a color in various formats to a tuple
 
 
 ## &#x2696;&#xFE0F; License
