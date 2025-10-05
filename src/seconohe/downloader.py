@@ -33,7 +33,8 @@ USER_AGENT = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHT
 
 def _download_model_requests(logger: logging.Logger, url: str, save_dir: str, file_name: str) -> str:
     """
-    Downloads a file using the `requests` library with streaming for progress.
+    Downloads a file using the `requests` library with streaming for progress
+    and support for resuming partial downloads.
     Progress is displayed to both console and ComfyUI.
 
     :param logger: Logger for status messages.
@@ -54,79 +55,92 @@ def _download_model_requests(logger: logging.Logger, url: str, save_dir: str, fi
 
     # Ensure the save directory exists
     os.makedirs(save_dir, exist_ok=True)
+
+    # --- Check for existing partial download ---
+    downloaded_size = 0
+    if os.path.exists(full_path_partial):
+        downloaded_size = os.path.getsize(full_path_partial)
+
     try:
-        # Define headers to mimic a browser
-        headers = {'User-Agent': USER_AGENT}
+        # --- Prepare Request ---
+        headers = {'User-Agent': USER_AGENT}  # Define headers to mimic a browser
+        if downloaded_size > 0:
+            headers['Range'] = f'bytes={downloaded_size}-'
+            logger.info(f"Resuming download for {file_name} from {downloaded_size} bytes.")
+
         # Use a streaming request to handle large files and get content length
         with requests.get(url, stream=True, timeout=10, headers=headers) as r:
-            r.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+            # --- Handle Server Response for Resuming ---
+            open_mode = 'wb'  # Default to writing a new file
+            is_resuming = False
+            if r.status_code == 206:  # Partial Content
+                open_mode = 'ab'  # Append to existing file
+                is_resuming = True
+                # Get total size from Content-Range header (e.g., "bytes 123-456/789")
+                content_range = r.headers.get('content-range')
+                if content_range:
+                    total_size_in_bytes = int(content_range.split('/')[-1])
+                else:
+                    # Fallback if Content-Range is missing, though unlikely for 206
+                    total_size_in_bytes = downloaded_size + int(r.headers.get('content-length', 0))
+            else:
+                r.raise_for_status()  # Raise exception for other bad statuses (4xx or 5xx)
+                total_size_in_bytes = int(r.headers.get('content-length', 0))
+                if downloaded_size > 0:
+                    logger.warning(f"Server did not support resume for {file_name}. Starting download from beginning.")
+                    downloaded_size = 0  # Reset if server sends the full file
 
-            # Get total file size from headers
-            total_size_in_bytes = int(r.headers.get('content-length', 0))
+            # --- Setup Progress Bars ---
             # Download 200 blocks at most, ComfyUI 0.3.57 does a sync draw so it gets slow if we ask for thousands of updates
             block_size = max(total_size_in_bytes // 200, 65536)
 
-            # --- Setup Progress Bars ---
             # Console progress bar using tqdm
             progress_bar_console = tqdm(
                 total=total_size_in_bytes,
                 unit='iB',
                 unit_scale=True,
+                initial=downloaded_size,  # Set the initial progress
                 desc=f"Downloading {file_name}"
             )
 
             # ComfyUI progress bar
             progress_bar_ui = comfy.utils.ProgressBar(total_size_in_bytes) if with_comfy else None
+            if progress_bar_ui and is_resuming:
+                # Manually update ComfyUI bar to its starting point
+                progress_bar_ui.update(downloaded_size)
 
             # --- Download Loop ---
-            downloaded_size = 0
-            with open(full_path_partial, 'wb') as f:
+            with open(full_path_partial, open_mode) as f:
                 for chunk in r.iter_content(chunk_size=block_size):
                     if chunk:  # filter out keep-alive new chunks
-                        chunk_size = len(chunk)
-
-                        # Update console progress bar
-                        progress_bar_console.update(chunk_size)
-
-                        # Update ComfyUI progress bar
-                        downloaded_size += chunk_size
+                        chunk_len = len(chunk)
+                        progress_bar_console.update(chunk_len)
                         if progress_bar_ui:
-                            progress_bar_ui.update(chunk_size)  # ProgressBar takes absolute value, but update is incremental
-
-                        # Write chunk to file
+                            progress_bar_ui.update(chunk_len)
                         f.write(chunk)
 
             # --- Cleanup ---
             progress_bar_console.close()
 
-            # Final check to see if download was complete
-            if total_size_in_bytes != 0 and progress_bar_console.n != total_size_in_bytes:
+            # --- Final Verification ---
+            # Use final file size on disk for verification
+            final_size = os.path.getsize(full_path_partial)
+            if total_size_in_bytes != 0 and final_size != total_size_in_bytes:
                 logger.error("Download failed: Size mismatch.")
-                # Optional: remove partial file
-                # os.remove(full_path)
                 raise IOError(f"Download failed for {file_name}. Expected {total_size_in_bytes} but got "
-                              f"{progress_bar_console.n}")
+                              f"{final_size}")
 
             os.rename(full_path_partial, full_path)
 
         return full_path
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"Network error while downloading {file_name}: {e}")
-        # Clean up partial file if it exists
-        if os.path.exists(full_path_partial):
-            try:
-                os.remove(full_path_partial)
-            except OSError:
-                pass
+        logger.error(f"Network error while downloading {file_name}: {e}. Partial file preserved for future resume.")
+        # DO NOT remove the partial file, allow resuming later
         raise
     except Exception as e:
-        logger.error(f"An error occurred during download: {e}")
-        if os.path.exists(full_path_partial):
-            try:
-                os.remove(full_path_partial)
-            except OSError:
-                pass
+        logger.error(f"An error occurred during download: {e}. Partial file preserved for future resume.")
+        # DO NOT remove the partial file, allow resuming later
         raise
 
 
@@ -248,8 +262,10 @@ def download_file(logger: logging.Logger, url: str, save_dir: str, file_name: st
 
 
 if __name__ == '__main__':
-    # download_file(logging.getLogger(__name__), 'https://i.pinimg.com/736x/c8/23/6d/c8236d1fbabec05abd13d19ddd8e516e.jpg',
-    #               '.', 'test.jpg', force_urllib=False, kind="image")
-    download_file(logging.getLogger(__name__), 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/'
-                  'Balearica_regulorum_1_Luc_Viatour.jpg/1080px-Balearica_regulorum_1_Luc_Viatour.jpg',
-                  '.', 'test.jpg', force_urllib=True, kind="image")
+    if False:
+        download_file(logging.getLogger(__name__), 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/'
+                      'Balearica_regulorum_1_Luc_Viatour.jpg/1080px-Balearica_regulorum_1_Luc_Viatour.jpg',
+                      '.', 'test.jpg', force_urllib=False, kind="image")
+    if True:
+        download_file(logging.getLogger(__name__), 'https://huggingface.co/ZhengPeng7/BiRefNet_HR/resolve/main/'
+                      'model.safetensors', '.', 'General-HR.safetensors', force_urllib=False, kind="model")
