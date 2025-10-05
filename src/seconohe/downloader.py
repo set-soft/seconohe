@@ -15,7 +15,7 @@ try:
 except ImportError:
     with_requests = False
 from urllib.error import URLError
-from urllib.request import urlretrieve
+from urllib import request
 from tqdm import tqdm
 # ComfyUI imports
 try:
@@ -50,6 +50,7 @@ def _download_model_requests(logger: logging.Logger, url: str, save_dir: str, fi
     :rtype: str
     """
     full_path = os.path.join(save_dir, file_name)
+    full_path_partial = full_path + '.partial'
 
     # Ensure the save directory exists
     os.makedirs(save_dir, exist_ok=True)
@@ -79,7 +80,7 @@ def _download_model_requests(logger: logging.Logger, url: str, save_dir: str, fi
 
             # --- Download Loop ---
             downloaded_size = 0
-            with open(full_path, 'wb') as f:
+            with open(full_path_partial, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=block_size):
                     if chunk:  # filter out keep-alive new chunks
                         chunk_size = len(chunk)
@@ -106,22 +107,24 @@ def _download_model_requests(logger: logging.Logger, url: str, save_dir: str, fi
                 raise IOError(f"Download failed for {file_name}. Expected {total_size_in_bytes} but got "
                               f"{progress_bar_console.n}")
 
+            os.rename(full_path_partial, full_path)
+
         return full_path
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Network error while downloading {file_name}: {e}")
         # Clean up partial file if it exists
-        if os.path.exists(full_path):
+        if os.path.exists(full_path_partial):
             try:
-                os.remove(full_path)
+                os.remove(full_path_partial)
             except OSError:
                 pass
         raise
     except Exception as e:
         logger.error(f"An error occurred during download: {e}")
-        if os.path.exists(full_path):
+        if os.path.exists(full_path_partial):
             try:
-                os.remove(full_path)
+                os.remove(full_path_partial)
             except OSError:
                 pass
         raise
@@ -133,72 +136,63 @@ class _Downloader:
         self.model_path = model_path
         self.model_name = model_name
         self.model_full_name = os.path.join(self.model_path, self.model_name)
+        self.model_full_name_partial = self.model_full_name + '.partial'
         # Ensure the directory for the model_path exists before __init__ if used elsewhere
         # or create it at the start of download_model
-
-    # A TQDM helper class for urlretrieve reporthook
-    # This is a common pattern for this use case.
-    class _TqdmUpTo(tqdm):
-        """
-        Provides `update_to(block_num, block_size, total_size)`
-        and updates the TQDM bar.
-        """
-        def __init__(self, unit, unit_scale, unit_divisor, miniters, desc):
-            super().__init__(unit=unit, unit_scale=unit_scale, unit_divisor=unit_divisor, miniters=miniters, desc=desc)
-            self.ui_bar = None
-            self.total = None
-
-        def update_to(self, block_num=1, block_size=1, total_size=None):
-            """
-            block_num  : int, optional
-                Number of blocks transferred so far [default: 1].
-            block_size : int, optional
-                Size of each block (in tqdm units) [default: 1].
-            total_size : int, optional
-                Total size (in tqdm units). If [default: None] remains unchanged.
-            """
-            if total_size is not None and self.total is None:
-                self.total = total_size
-                # ComfyUI progress bar
-                if self.ui_bar is None and with_comfy:
-                    self.ui_bar = comfy.utils.ProgressBar(total_size)
-            # self.update() will take the *difference* from the last call.
-            # So we pass the number of new blocks * block_size.
-            # Since block_num is cumulative, we calculate the new amount.
-            chunk_size = block_num * block_size - self.n
-            self.update(chunk_size)  # self.n is current progress
-            if self.ui_bar:
-                self.ui_bar.update(chunk_size)  # ProgressBar takes absolute value, but update is incremental
 
     def download_model(self, url: str):
         try:
             # Ensure the directory exists
-            # Use or '.' for current dir if dirname is empty
             os.makedirs(self.model_path or '.', exist_ok=True)
 
-            # Get filename for tqdm description
-            filename = self.model_name
+            # 1. Create a Request object with custom headers
+            headers = {'User-Agent': USER_AGENT}
+            req = request.Request(url, headers=headers)
 
-            # Use _TqdmUpTo as a context manager
-            with self._TqdmUpTo(unit='iB', unit_scale=True, unit_divisor=1024, miniters=1,
-                                desc=f"Downloading {filename}") as t:
-                # urlretrieve(url, filename=None, reporthook=None, data=None)
-                # reporthook is called with (block_num, block_size, total_size)
-                urlretrieve(url, self.model_full_name, reporthook=t.update_to)
-            # The 'with' statement ensures t.close() is called.
+            # 2. Open the URL and get the response
+            with request.urlopen(req) as response:
+                # Check if the server sent a Content-Length header
+                total_size = int(response.headers.get('Content-Length', 0))
+                filename = self.model_name
+
+                # 3. Manually download the file in chunks with tqdm progress bar
+                with open(self.model_full_name_partial, 'wb') as f_out, tqdm(
+                    desc=f"Downloading {filename}",
+                    total=total_size,
+                    unit='iB',
+                    unit_scale=True,
+                    unit_divisor=1024,
+                ) as bar:
+                    ui_bar = None
+                    if with_comfy:
+                        ui_bar = comfy.utils.ProgressBar(total_size)
+
+                    # Read and write in chunks
+                    chunk_size = max(total_size // 200, 65536)
+                    while True:
+                        chunk = response.read(chunk_size)
+                        if not chunk:
+                            break
+                        f_out.write(chunk)
+                        bar.update(len(chunk))
+                        if ui_bar:
+                            ui_bar.update(len(chunk))
+
+            # Rename the partial file to the final filename upon success
+            os.rename(self.model_full_name_partial, self.model_full_name)
 
             return filename
 
         except URLError as e:  # More specific exception for network issues
             # Clean up partially downloaded file if an error occurs
-            if os.path.exists(self.model_full_name):
-                os.remove(self.model_full_name)
+            if os.path.exists(self.model_full_name_partial):
+                os.remove(self.model_full_name_partial)
             raise Exception(f"An error occurred while downloading the model (URL Error): {e.reason} from {url}")
 
         except Exception as e:
             # Clean up partially downloaded file if an error occurs
-            if os.path.exists(self.model_full_name):
-                os.remove(self.model_full_name)
+            if os.path.exists(self.model_full_name_partial):
+                os.remove(self.model_full_name_partial)
             raise Exception(f"An unexpected error occurred while downloading the model: {e}")
 
 
@@ -258,4 +252,4 @@ if __name__ == '__main__':
     #               '.', 'test.jpg', force_urllib=False, kind="image")
     download_file(logging.getLogger(__name__), 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/'
                   'Balearica_regulorum_1_Luc_Viatour.jpg/1080px-Balearica_regulorum_1_Luc_Viatour.jpg',
-                  '.', 'test.jpg', force_urllib=False, kind="image")
+                  '.', 'test.jpg', force_urllib=True, kind="image")
