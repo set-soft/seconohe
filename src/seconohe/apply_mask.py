@@ -40,31 +40,36 @@ def apply_mask(
     blur_size_two: int = 7,
     fill_color: bool = False,
     color: Optional[str] = None,
-    batched: bool = True
+    batched: bool = True,
+    background: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     b, h, w, c = images.shape
     if b != masks.shape[0]:
         raise ValueError("images and masks must have the same batch size")
+    if background is not None and background.shape != images.shape:
+        raise ValueError("background image must match foreground image size")
 
     images_on_device = images.to(device)
     masks_on_device = masks.to(device)
 
     # Approximate Fast Foreground Colour Estimation
     _image_masked_tensor = affce(images_on_device, masks_on_device, r1=blur_size, r2=blur_size_two, batched=batched)
+    del images_on_device
 
-    if fill_color and color is not None:
+    if background is not None:
+        mask_to_apply = masks_on_device.unsqueeze(3).expand_as(_image_masked_tensor)
+        logger.debug(f"mask_to_apply.shape {mask_to_apply.shape}")
+        out_images = _image_masked_tensor * mask_to_apply + background.to(device) * (1 - mask_to_apply)
+    elif fill_color and color is not None:
         color = color_to_rgb_float(logger, color)
         # (b, h, w, 3)
         background_color = torch.tensor(color, device=device, dtype=images.dtype).view(1, 1, 1, 3).expand(b, h, w, 3)
-        # (b, 1, h, w) => (b, h, w, 3)
+        # (b, h, w) => (b, h, w, 3)
         mask_to_apply = masks_on_device.unsqueeze(3).expand_as(_image_masked_tensor)
         out_images = _image_masked_tensor * mask_to_apply + background_color.to(device) * (1 - mask_to_apply)
         # (b, h, w, 3)=>(b, h, w, 3)
-        del background_color, mask_to_apply
     else:
         # The non-mask corresponding parts of the image are set to transparent
         out_images = add_mask_as_alpha(_image_masked_tensor.cpu(), masks.cpu())
-
-    del _image_masked_tensor
 
     return out_images
