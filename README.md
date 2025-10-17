@@ -22,6 +22,7 @@ Other than that you'll find the functionality is really heterogeneous.
   - &#x270D;&#xFE0F; [Automatic Node Registration](#&#xFE0F;-automatic-node-registration)
   - &#x2699;&#xFE0F; [PyTorch Helpers](#&#xFE0F;-pytorch-helpers)
   - &#x0001F39B;&#xFE0F; [Changing Widget Values](#&#xFE0F;-changing-widget-values)
+  - [Batch iterator](#batch-iterator)
   - [Color parser](#color-parser)
   - [Foreground estimation](#foreground-estimation)
 - &#x0001F680; [Examples of Nodes Using SeCoNoHe](#-examples-of-nodes-using-seconohe)
@@ -408,6 +409,70 @@ send_node_action(logger, "change_widget", WIDGET_NAME, NEW_VALUE)
 
 Note that you must register the JS extensions like with the [Toast Notifications](#-comfyui-toast-notifications).
 
+
+### Batch iterator
+
+Batch processing can speed up many operations, but you can't handle arbitrary batch sizes.
+In ComfyUI a video is just a batch of images (B, H, W, 3).
+So a node that gets a batch as input and tries to process the whole batch at once will most probably go OOM when you
+connect a long video at its input.
+
+Most nodes avoids this problem by just iterating on the batch:
+
+```python
+for image in images:
+    ....
+```
+
+But in this case you just remove any advantage of processing a batch in parallel.
+The best solution is to add a `batch_size` parameter and then process no more than `batch_size` at once.
+So you can run in parallel, but with a limit.
+
+Implementing it isn't complex, but makes the code less clear. For this reason SeCoNoHe provides a class to abstract it.
+You use it like this:
+
+```python
+from seconohe.bti import BatchedTensorIterator
+batched_iterator = BatchedTensorIterator(
+    tensor=large_batch,
+    sub_batch_size=SUB_BATCH_SIZE,
+    device=TARGET_DEVICE
+)
+for i, batch_range in enumerate(batched_iterator):
+    sub_batch = batched_iterator.get_batch(batch_range)
+
+    # Use the slice here
+
+    del sub_batch  # Avoid two instances at the same time in the target device
+```
+
+You don't need the `del` if you don't care about having two slices alloocated at the same time during a short period of time.
+You might also do:
+
+```python
+for i, batch_range in enumerate(batched_iterator):
+    do_something(batched_iterator.get_batch(batch_range))
+```
+
+Taking advantage of the implicit deletion of the temporal slice.
+If you can't afford having two of the slices in the target device at the same time you might want to use:
+
+```python
+for i, batch_range in enumerate(batched_iterator):
+    sub_batch = None  # Ensure variable exists before the try block
+    try:
+        # 1. Acquire the resource
+        sub_batch = batched_iterator.get_batch(batch_range)
+
+        # 2. Use the resource
+        # Your processing code goes here.
+        # If an error happens, the `finally` block is still executed.
+
+    finally:
+        # 3. Guarantee the resource is released
+        if sub_batch is not None:
+            del sub_batch
+```
 
 ### Color parser
 
