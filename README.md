@@ -474,6 +474,9 @@ for i, batch_range in enumerate(batched_iterator):
             del sub_batch
 ```
 
+If you ask why don't just use `TensorDataset` and `DataLoader`: in my experience it creates a temporal copy of the whole tensor.
+
+
 ### Color parser
 
 To convert a color string into its components:
