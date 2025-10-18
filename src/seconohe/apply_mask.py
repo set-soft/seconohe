@@ -7,6 +7,7 @@
 # Most of the code is from https://github.com/lldacing/ComfyUI_BiRefNet_ll
 import logging
 import torch
+import torch.nn.functional as F
 from typing import Optional
 from .foreground_estimation.affce import affce
 from .color import color_to_rgb_float
@@ -46,8 +47,6 @@ def apply_mask(
     b, h, w, c = images.shape
     if b != masks.shape[0]:
         raise ValueError("images and masks must have the same batch size")
-    if background is not None and background.shape != images.shape:
-        raise ValueError("background image must match foreground image size")
 
     images_on_device = images.to(device)
     masks_on_device = masks.to(device)
@@ -58,6 +57,10 @@ def apply_mask(
 
     if background is not None:
         mask_to_apply = masks_on_device.unsqueeze(3).expand_as(_image_masked_tensor)
+        background = background.to(device)
+        if background.shape != images.shape:
+            # Make the background and foreground match its size
+            background = F.interpolate(background.movedim(-1, 1), size=images.shape[-3:-1], mode='bicubic').movedim(1, -1)
         out_images = _image_masked_tensor * mask_to_apply + background.to(device) * (1 - mask_to_apply)
     elif fill_color and color is not None:
         color = color_to_rgb_float(logger, color)
