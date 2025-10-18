@@ -58,7 +58,6 @@ def apply_mask(
 
     if background is not None:
         mask_to_apply = masks_on_device.unsqueeze(3).expand_as(_image_masked_tensor)
-        logger.debug(f"mask_to_apply.shape {mask_to_apply.shape}")
         out_images = _image_masked_tensor * mask_to_apply + background.to(device) * (1 - mask_to_apply)
     elif fill_color and color is not None:
         color = color_to_rgb_float(logger, color)
