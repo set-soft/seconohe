@@ -6,6 +6,11 @@
 # String to color tuple conversion
 import logging
 import re
+try:
+    import PIL.ImageColor
+    with_pil = True
+except Exception:
+    with_pil = False
 COLORS_BY_NAME = {
     # Monochrome
     "black": (0.0, 0.0, 0.0),
@@ -42,6 +47,8 @@ def color_to_rgb(logger: logging.Logger, color_str: str) -> tuple[float, float, 
     """
     Parses a color string into a high-precision tuple of (R, G, B) floats in the [0, 255] range.
     This is the core parsing engine.
+    It also supports using [0,1] values, 140 names, #RGB, #RRGGBB, rgb(R,G,B), rgb(r%,g%,b%),
+    hsl(H,S%,L%) and hsv(H,S%,V%).
 
     :param logger: A logger instance.
     :param color_str: The string to convert.
@@ -49,11 +56,20 @@ def color_to_rgb(logger: logging.Logger, color_str: str) -> tuple[float, float, 
     """
     s = str(color_str).strip().lower()
 
-    # --- 1. A few colors by name
+    # --- 1. Use PIL.ImageColor if available
+    # Supports some 140 names, #RGB, #RRGGBB, rgb(R,G,B), rgb(r%,g%,b%), hsl(H,S%,L%), hsv(H,S%,V%)
+    if with_pil:
+        try:
+            rgb = PIL.ImageColor.getrgb(s)[:3]
+            return tuple(map(lambda x: float(x), rgb))
+        except ValueError:
+            pass
+
+    # --- 2. A few colors by name
     if s in COLORS_BY_NAME:
         return COLORS_BY_NAME[s]
 
-    # --- 2. Hexadecimal Parsing Block ---
+    # --- 3. Hexadecimal Parsing Block ---
     hex_s = s
     if hex_s.startswith('#'):
         hex_s = hex_s[1:]
@@ -62,7 +78,7 @@ def color_to_rgb(logger: logging.Logger, color_str: str) -> tuple[float, float, 
         # Hex always directly converts to the 0-255 integer range.
         return tuple(float(int(hex_s[i:i+2], 16)) for i in (0, 2, 4))[0:3]
 
-    # --- 3. Component Parsing Block ---
+    # --- 4. Component Parsing Block ---
     try:
         parts = [float(p.strip()) for p in s.split(',')]
     except (ValueError, TypeError):
@@ -129,9 +145,11 @@ def run_tests():
         ("Hex lowercase", "#abcdef", (171/255.0, 205/255.0, 239/255.0)),
         ("Hex with spaces", "  #0000FF  ", (0.0, 0.0, 1.0)),
         ("Invalid Hex", "#12345G", (0.0, 0.0, 0.0)),
-        ("Short Hex", "#123", (0.0, 0.0, 0.0)),
+        ("Short Hex 1", "#123", (17/255.0, 34/255.0, 51/255.0)),
+        ("Short Hex 2", "#12", (0.0, 0.0, 0.0)),
 
-        ("Int Components", "255, 128, 0", (1.0, 128/255.0, 0.0)),
+        ("Int Components 1", "255, 128, 0", (1.0, 128/255.0, 0.0)),
+        ("Int Components 2", "rgb(255,128,0)", (1.0, 128/255.0, 0.0)),
         ("Int Components with spaces", " 10,  20 ,30 ", (10/255.0, 20/255.0, 30/255.0)),
         ("Float Components", "1.0, 0.5, 0.0", (1.0, 0.5, 0.0)),
         ("Float Components [0,1] no spaces", "0.1,0.2,0.3", (0.1, 0.2, 0.3)),
@@ -147,8 +165,10 @@ def run_tests():
         ("Mixed Int/Float > 1", "128, 0.5", (128/255.0, 0.5/255.0, 0.0)),  # Correctly parsed as 0-255 range
         ("Unsafe Float Heuristic 1", "255., 128, 0", (1.0, 128/255.0, 0.0)),
 
+        ("Color name", "blue", (0.0, 0.0, 1.0)),
+
         ("Invalid Hex", "#12345G", (0.0, 0.0, 0.0)),
-        ("Invalid Text", "blue", (0.0, 0.0, 0.0)),
+        ("Invalid Text", "glue", (0.0, 0.0, 0.0)),
         ("Invalid components", "255, 128, abc", (0.0, 0.0, 0.0)),
     ]
 

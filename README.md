@@ -493,7 +493,16 @@ The color can be represented using:
 - An hexadecimal RGB value: `#RRGGBB` or `RRGGBB`, like in web applications, i.e. `#AB8020`
 - Comma separated integers: `r, g, b`, i.e. `171,128,32`
 - Comma separated floats: `r, g, b`, i.e. `0.67,0.5,0.13`
+- Some 20 color names
 
+When PIL is installed, should be always for ComfyUI, also supports:
+
+- Short hexa values: `#RGB` i.e. `#B82`
+- Explicit `rgb` keyword: `rgb(R,G,B)` i.e. `rgb(171,128,32)`
+- Percentages: `rgb(R%,G%,B%)` i.e. `rgb(67%,50%,13%)`
+- Hue-Saturation-Lightness (HSL): `hsl(H,S%,L%)`
+- Hue-Saturation-Value (HSV): `hsv(H,S%,V%)`
+- Around 140 color names
 
 Features:
 
