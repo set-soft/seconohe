@@ -394,6 +394,10 @@ It also returns a suitable default value. Example:
 
 Note that this tries to offload the model even if the inference fails. Avoiding the classic VRAM waste after a fail.
 
+`get_pytorch_memory_usage_str` is used to get a string with the memory usage.
+
+`TorchProfile` can be used to measure the time and VRAM consumed by a CUDA task.
+
 
 ### &#x0001F39B;&#xFE0F; Changing Widget Values
 

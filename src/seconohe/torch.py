@@ -14,6 +14,7 @@ try:
 except Exception:
     with_comfy = False
 from .misc import format_bytes
+from .logger import get_debug_level
 
 
 def get_torch_device_options(with_auto: Optional[bool] = False) -> tuple[list[str], str]:
@@ -104,7 +105,7 @@ def get_pytorch_memory_usage_str(device: Optional[Union[int, torch.device]] = No
 
     # Resolve the device
     if device is None:
-        device = torch.cuda.current_device()
+        device = mm.get_torch_device() if with_comfy else torch.cuda.current_device()
 
     # Get memory stats
     allocated = torch.cuda.memory_allocated(device)
@@ -231,3 +232,63 @@ def model_to_target(logger: logging.Logger, model: torch.nn.Module) -> Iterator[
                         torch.cuda.empty_cache()
             except StopIteration:
                 pass  # Model with no parameters doesn't need offloading.
+
+
+# ##################################################################################
+# # Helper for profiling
+# ##################################################################################
+
+
+class TorchProfile(object):
+    def __init__(self, logger: logging.Logger, level: int, msg: str, device: Optional[torch.device] = None):
+        """
+        Used to measure the time and VRAM used for a CUDA task.
+
+        :param logger: The logger instance to display the information.
+        :type logger: logging.Logger
+        :param level: The required verbosity level to display this information.
+        :type level: int
+        :param msg: The message string to display along with the information.
+        :type msg: str
+        :param device: CUDA device, otherwise we use the default
+        :type device: torch.device (optional)
+        """
+        super().__init__()
+        self.enabled = False
+        if get_debug_level(logger) < level:
+            return
+        if not torch.cuda.is_available():
+            logger.debug("CUDA is not available. No GPU memory/timing to report.")
+            return
+        if device is None:
+            device = mm.get_torch_device() if with_comfy else torch.cuda.current_device()
+        self.enabled = True
+        self.logger = logger
+        self.device = device
+        self.msg = msg
+        self.start_event = torch.cuda.Event(enable_timing=True)
+        self.end_event = torch.cuda.Event(enable_timing=True)
+        self.start()
+
+    def start(self):
+        """ Start to profile. Automatically invoked by the constructor """
+        if not self.enabled:
+            return
+        self.logger.debug(f"Starting {self.msg} on {self.device}")
+        torch.cuda.reset_peak_memory_stats(self.device)
+        self.base_vram = torch.cuda.memory_allocated(self.device) / (1024 ** 2)  # in MB
+        self.start_event.record()
+
+    def end(self):
+        """ Stop profiling and show the results """
+        if not self.enabled:
+            return
+        # Stop timer
+        self.end_event.record()
+        time = self.start_event.elapsed_time(self.end_event)
+        # Get peak used memory
+        torch.cuda.synchronize(self.device)
+        mem_peak = torch.cuda.max_memory_allocated(self.device) / (1024 ** 2)  # in MB
+        # Show it
+        self.logger.debug(f"Finished {self.msg} on {self.device}: {time:.6f} ms, peak {mem_peak:.2f} MiB"
+                          f" (+{mem_peak-self.base_vram:.2f} MiB)")
