@@ -550,7 +550,11 @@ alpha channel.
    - Added mechanism to apply a mask to an image
    - Added PyTorch memory usage
    - Added code to convert a color in various formats to a tuple
-
+- 1.0.4 2025-10-22:
+   - Better color parsing, now supports all PIL formats (rgb, hsv, hsl rgb%)
+   - Added CUDA profiler (timer and peak memory use)
+   - Apply mask: allow replacing by an image
+   - Added batch iterator
 
 ## &#x2696;&#xFE0F; License
 
