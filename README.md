@@ -555,6 +555,8 @@ alpha channel.
    - Added CUDA profiler (timer and peak memory use)
    - Apply mask: allow replacing by an image
    - Added batch iterator
+- 1.0.5 2025-10-23:
+   - Fixed missing colors on logger
 
 ## &#x2696;&#xFE0F; License
 
