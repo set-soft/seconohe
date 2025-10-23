@@ -31,7 +31,8 @@ else:
         Style = colorama.Style
         colorama_init = colorama.init
         # Initialize at runtime
-        colorama_init()
+        # TODO: What about Windows? Should we filter the sequences?
+        colorama_init(strip=False)
     except ImportError:
         # If the import fails, import our fallback module
         from . import _ansi
@@ -88,6 +89,8 @@ class CustomFormatter(logging.Formatter):
         format = "[%(levelname)s] %(message)s (%(name)s - %(filename)s:%(lineno)d)"
         format_simple = "%(message)s"
         if not sys.stdout.isatty():
+            # For standalone use we avoid colors on log files
+            # On Comfy we never get a real TTY, Comfy gets the messages and then sends them to the console
             white = yellow = red = red_alarm = cyan = reset = ""
         self.FORMATS_STANDALONE = {
             logging.DEBUG: cyan + format + reset,

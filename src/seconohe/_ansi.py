@@ -3,13 +3,11 @@
 This module generates ANSI character codes to printing colors to terminals.
 See: http://en.wikipedia.org/wiki/ANSI_escape_code
 '''
-import sys
-import os
-
 CSI = '\033['
 OSC = '\033]'
 BEL = '\a'
-is_a_tty = sys.stderr.isatty() and os.name == 'posix'
+# On Comfy we never get a real TTY, Comfy gets the messages and then sends them to the console
+is_a_tty = True  # sys.stderr.isatty() and os.name == 'posix'
 
 
 def code_to_chars(code):
