@@ -7,6 +7,7 @@ import inspect
 import logging
 import types
 from typing import List, Tuple, Type, Optional
+from comfy_api.latest import ComfyExtension, io
 
 
 def register_nodes(
@@ -87,3 +88,66 @@ def register_nodes(
     logger.debug(f"Registered display names: {list(node_display_name_mappings.values())}")
 
     return node_class_mappings, node_display_name_mappings
+
+
+class ComfyReg(ComfyExtension):
+    """ This is the type that must be returned by `comfy_entrypoint` """
+    def __init__(self, classes):
+        super().__init__()
+        self.classes = classes
+
+    # Must be declared as async
+    async def get_node_list(self) -> list[type[io.ComfyNode]]:
+        return self.classes
+
+
+def register_nodes_v3(
+    logger: logging.Logger,
+    modules: List[types.ModuleType],
+    version: Optional[str] = None
+) -> ComfyExtension:
+    """
+    Scans a list of modules to discover and register ComfyUI node classes.
+    This is for the API V3.
+
+    This function iterates through the provided Python modules, inspects their
+    members, and identifies classes that conform to the ComfyUI node structure.
+    It creates the registering object required by ComfyUI.
+
+    Node classes are expected to have the following class attributes:
+    - ``define_schema`` (classmethod)
+    - ``execute`` (classmethod)
+
+    :param logger: A logger instance for logging registration activity.
+    :type logger: logging.Logger
+    :param modules: A list of Python module objects to scan for nodes.
+    :type modules: List[types.ModuleType]
+    :param version: The version of the nodes, when provided is included in the logs.
+    :type version: Optional[str]
+    :return: A `ComfyExtension` object suitable for the `comfy_entrypoint`
+    :rtype: ComfyExtension
+    """
+    v3_nodes: Type = []
+
+    logger.debug(f"Scanning {len(modules)} module(s) for nodes...")
+    for module in modules:
+        logger.debug(f"Scanning module '{module.__name__}'")
+        for name, obj in inspect.getmembers(module):
+            # Skip anything that's not a class
+            if not inspect.isclass(obj):
+                continue
+
+            # Ensures we only register classes defined IN THIS MODULE, not imported ones.
+            if obj.__module__ != module.__name__:
+                continue
+
+            if not (hasattr(obj, 'define_schema') and hasattr(obj, 'execute')):
+                continue
+
+            v3_nodes.append(obj)
+
+    version_str = f" for version {version}" if version is not None else ""
+    logger.info(f"Registering {len(v3_nodes)} node(s){version_str}.")
+    logger.debug(f"Registered classes: {[c.__name__ for c in v3_nodes]}")
+
+    return ComfyReg(v3_nodes)
