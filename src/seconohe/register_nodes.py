@@ -7,7 +7,16 @@ import inspect
 import logging
 import types
 from typing import List, Tuple, Type, Optional
-from comfy_api.latest import ComfyExtension, io
+try:
+    from comfy_api.latest import ComfyExtension, io
+except ImportError:
+    # Dummies for the docs generation
+    class ComfyExtension():
+        pass
+
+    class io():
+        class ComfyNode():
+            pass
 
 
 def register_nodes(
