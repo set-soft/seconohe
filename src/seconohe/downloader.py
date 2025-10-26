@@ -266,6 +266,10 @@ if __name__ == '__main__':
         download_file(logging.getLogger(__name__), 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/'
                       'Balearica_regulorum_1_Luc_Viatour.jpg/1080px-Balearica_regulorum_1_Luc_Viatour.jpg',
                       '.', 'test.jpg', force_urllib=False, kind="image")
-    if True:
+    if False:
         download_file(logging.getLogger(__name__), 'https://huggingface.co/ZhengPeng7/BiRefNet_HR/resolve/main/'
                       'model.safetensors', '.', 'General-HR.safetensors', force_urllib=False, kind="model")
+    if True:
+        download_file(logging.getLogger(__name__), 'https://postechackr-my.sharepoint.com/:u:/g/personal/'
+                      'taehoon1018_postech_ac_kr/ERqm7RPeNBFPvVxkA5P5G2AB-mtFsiYkCNHnBf0DcwpFzw?e=nayVno&download=1',
+                      '.', 'InSPyReNet_Res2Net50.pth', force_urllib=False, kind="model")
