@@ -285,9 +285,9 @@ class TorchProfile(object):
             return
         # Stop timer
         self.end_event.record()
+        torch.cuda.synchronize(self.device)
         time = self.start_event.elapsed_time(self.end_event)
         # Get peak used memory
-        torch.cuda.synchronize(self.device)
         mem_peak = torch.cuda.max_memory_allocated(self.device) / (1024 ** 2)  # in MB
         # Show it
         self.logger.debug(f"Finished {self.msg} on {self.device}: {time:.6f} ms, peak {mem_peak:.2f} MiB"
