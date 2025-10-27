@@ -557,6 +557,11 @@ alpha channel.
    - Added batch iterator
 - 1.0.5 2025-10-23:
    - Fixed missing colors on logger
+- 1.0.6 2025-10-27:
+   - Added support to register V3 nodes
+   - Path registering mechanism
+   - Fixed time measurement
+   - Added abstraction for comfy.ops
 
 ## &#x2696;&#xFE0F; License
 
