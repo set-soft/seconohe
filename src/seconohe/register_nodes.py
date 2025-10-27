@@ -5,11 +5,15 @@
 # Helper to register all nodes from the provided modules
 import inspect
 import logging
+import os
 import types
 from typing import List, Tuple, Type, Optional
 try:
     from comfy_api.latest import ComfyExtension, io
+    comfy_v3_available = True
 except ImportError:
+    comfy_v3_available = False
+
     # Dummies for the docs generation
     class ComfyExtension():
         pass
@@ -17,6 +21,11 @@ except ImportError:
     class io():
         class ComfyNode():
             pass
+try:
+    # ComfyUI folders code
+    import folder_paths
+except ImportError:
+    pass
 
 
 def register_nodes(
@@ -160,3 +169,60 @@ def register_nodes_v3(
     logger.debug(f"Registered classes: {[c.__name__ for c in v3_nodes]}")
 
     return ComfyReg(v3_nodes)
+
+
+def register_models_key(logger: logging.Logger, key: str, dir: str, extra_keys: Optional[dict[str, str]] = None) -> None:
+    """
+    Registers a new folder key `key` pointing to `dir`.
+    If the key is already registered we add `dir` to the current key.
+
+    When registering a new key and `extra_keys` is provided we also
+    merge the dirs from these keys to our dirs.
+
+    :param logger: A logger instance for logging registration activity.
+    :type logger: logging.Logger
+    :param key: A folder key (like ones in `extra_model_paths.yaml`)
+    :type key: str
+    :param dir: The dir to use for this key (ComfyUI/models/{dir})
+    :type dir: str
+    :param extra_keys: Other keys to merge to ours
+    :type extra_keys: Optional[dict[str, str]]
+    """
+    # ComfyUI/models/{dir} will be the default
+    models_dir_default = os.path.join(folder_paths.models_dir, dir)
+    try:
+        if not os.path.exists(models_dir_default):
+            os.makedirs(models_dir_default, exist_ok=True)  # Ensure the dir exists
+    except Exception:
+        # Read-only file system?
+        pass
+    # Add our key
+    folder_paths.add_model_folder_path(key, models_dir_default)
+    logger.debug(f"Registered folder `{models_dir_default}` with key `{key}`")
+    exts = folder_paths.supported_pt_extensions
+    # Merge keys
+    if extra_keys:
+        for k, v in extra_keys.items():
+            m_dirs, m_exts = folder_paths.folder_names_and_paths.get(k, ([os.path.join(folder_paths.models_dir, v)], set()))
+            for dir in m_dirs:
+                folder_paths.add_model_folder_path(key, dir)
+                logger.debug(f"- Adding {dir}")
+            exts |= m_exts
+    # Now update the extensions
+    m_dirs, m_exts = folder_paths.folder_names_and_paths[key]
+    folder_paths.folder_names_and_paths[key] = (m_dirs, exts)
+    logger.debug(f"Final dirs: {m_dirs}")
+    logger.debug(f"Final exts: {exts}")
+
+
+def check_v3(logger: logging.Logger) -> None:
+    """ Check if ComfyUI API v3 is implemented, otherwise raise an error
+
+    :param logger: A logger instance.
+    :type logger: logging.Logger
+    """
+    if comfy_v3_available:
+        return
+    msg = "ComfyUI 0.3.48 (Aug 1, 2025) is needed, please upgrade"
+    logger.error(msg)
+    raise ValueError(msg)
