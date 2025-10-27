@@ -301,6 +301,8 @@ def download_file(logger: logging.Logger, url: str, save_dir: str, file_name: st
 
 ### &#x270D;&#xFE0F; Automatic Node Registration
 
+#### ComfyUI API V1 and V2
+
 Manually maintaining the `NODE_CLASS_MAPPINGS` and `NODE_DISPLAY_NAME_MAPPINGS` in `__init__.py` is tedious and error-prone.
 This helper automates the process.
 
@@ -336,6 +338,7 @@ __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS']
 Of course you can register nodes from just one file:
 
 ```python
+from .src.nodes import main_logger
 from .src.nodes import my_nodes
 from seconohe.register_nodes import register_nodes
 
@@ -349,6 +352,20 @@ This is all you need.
 
 If you declare a variable named `SUFFIX` in your module all the display names for the nodes in the module will have " {SUFFIX}" added.
 
+#### ComfyUI API V3
+
+On API V3 things are different, but you still need to keep a list of classes to register, the SeCoNoHe mechanism is:
+
+```python
+from .src.nodes import main_logger, __version__  # Optional nodes version
+from seconohe.register_nodes import register_nodes_v3, check_v3
+
+check_v3(main_logger)
+
+async def comfy_entrypoint():
+    from .src.nodes import my_nodes
+    return register_nodes_v3(main_logger, [my_nodes], version=__version__)
+```
 
 ### &#x2699;&#xFE0F; PyTorch Helpers
 
