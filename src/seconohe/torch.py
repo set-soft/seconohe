@@ -51,6 +51,10 @@ def get_torch_device_options(with_auto: Optional[bool] = False) -> tuple[list[st
     return options, default
 
 
+def get_default_comfy_device() -> torch.device:
+    return get_canonical_device(mm.get_torch_device() if with_comfy else torch.cuda.current_device())
+
+
 def get_offload_device() -> torch.device:
     """
     Gets the appropriate device for offloading models.
@@ -105,7 +109,7 @@ def get_pytorch_memory_usage_str(device: Optional[Union[int, torch.device]] = No
 
     # Resolve the device
     if device is None:
-        device = mm.get_torch_device() if with_comfy else torch.cuda.current_device()
+        device = get_default_comfy_device()
 
     # Get memory stats
     allocated = torch.cuda.memory_allocated(device)
@@ -261,7 +265,7 @@ class TorchProfile(object):
             logger.debug("CUDA is not available. No GPU memory/timing to report.")
             return
         if device is None:
-            device = mm.get_torch_device() if with_comfy else torch.cuda.current_device()
+            device = get_default_comfy_device()
         self.enabled = True
         self.logger = logger
         self.device = device
