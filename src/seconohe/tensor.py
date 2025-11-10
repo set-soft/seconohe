@@ -5,9 +5,11 @@
 # Project: SeCoNoHe
 # Tensor manipulation helpers
 import torch
+from typing import Tuple, Union
 
 
-def batched_min_max_norm(s: torch.Tensor, in_place: bool = True) -> torch.Tensor:
+def batched_min_max_norm(s: torch.Tensor, in_place: bool = True,
+                         ret_status: bool = False) -> Union[torch.Tensor, Tuple[torch.Tensor, bool]]:
     """
     Performs per-sample min-max normalization on a batch of tensors.
 
@@ -24,10 +26,13 @@ def batched_min_max_norm(s: torch.Tensor, in_place: bool = True) -> torch.Tensor
                                    modified directly to save memory.
                                    If False, a clone of `s` is created and
                                    returned. Defaults to True.
-
+        ret_status (bool, optional): If True, also returns status information.
     Returns:
-        torch.Tensor: The normalized tensor. This will be the same object
-                      as the input `s` if `in_place=True`.
+        Union[torch.Tensor, Tuple[torch.Tensor, bool]]:
+        - If ret_status is False: The normalized torch.Tensor.
+        - If ret_status is True: A tuple containing:
+            - s (torch.Tensor): The normalized tensor.
+            - skipped (bool): True if the tensor was already normalized.
     """
     if not in_place:
         s = s.clone()
@@ -39,17 +44,24 @@ def batched_min_max_norm(s: torch.Tensor, in_place: bool = True) -> torch.Tensor
     mi = torch.min(s_flat, dim=1, keepdim=True).values
     ma = torch.max(s_flat, dim=1, keepdim=True).values
 
-    # Calculate the denominator, adding epsilon for stability
-    denominator = ma - mi
-    denominator[denominator == 0] = 1e-8  # Avoid division by zero for flat tensors
+    if torch.all(mi == 0.0) and torch.all(ma == 1.0):
+        skipped = True
+    else:
+        skipped = False
 
-    # Perform the normalization directly on the flattened view.
-    # Broadcasting handles the (B, N) shape with the (B, 1) min/max tensors.
-    s_flat -= mi
-    s_flat /= denominator
+        # Calculate the denominator, adding epsilon for stability
+        denominator = ma - mi
+        denominator[denominator == 0] = 1e-8  # Avoid division by zero for flat tensors
+
+        # Perform the normalization directly on the flattened view.
+        # Broadcasting handles the (B, N) shape with the (B, 1) min/max tensors.
+        s_flat -= mi
+        s_flat /= denominator
 
     # Because s_flat is a view of s, the original tensor s is now
     # normalized, with its original shape preserved. No reshaping needed.
+    if ret_status:
+        return s, skipped
     return s
 
 
